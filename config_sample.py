@@ -1,0 +1,19 @@
+# config.py 설정 예시 - 실제 키는 config.py에 입력하세요
+APP_KEY = "여기에_APP_KEY_입력"
+APP_SECRET = "여기에_APP_SECRET_입력"
+ACCOUNT_NUMBER = "계좌번호_8자리"
+ACCOUNT_SUFFIX = "01"
+IS_PAPER_TRADING = True
+BASE_URL = "https://openapivts.koreainvestment.com:29443"
+RISK_TOLERANCE = 0.02
+TAKE_PROFIT = 0.03
+STOCK_CODE = "005930"
+STOCK_NAME = "삼성전자"
+SHORT_MA = 5
+LONG_MA = 20
+TRADING_INTERVAL = 300
+ORDER_QUANTITY = 1
+TELEGRAM_TOKEN = "여기에_텔레그램_토큰_입력"
+TELEGRAM_CHAT_ID = "여기에_CHAT_ID_입력"
+NAVER_CLIENT_ID = "여기에_네이버_CLIENT_ID_입력"
+NAVER_CLIENT_SECRET = "여기에_네이버_CLIENT_SECRET_입력"
