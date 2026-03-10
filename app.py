@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, make_response
 import requests as req
 import sys, os
 import re
@@ -8,6 +8,7 @@ import kis_api
 import stock_master
 
 app = Flask(__name__)
+_balance_cache = {"holdings": {}, "deposit": 0}
 
 @app.route("/favicon.ico")
 def favicon():
@@ -22,7 +23,11 @@ stock_master.ensure_updated()
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    resp = make_response(render_template("index.html"))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 @app.route("/api/search/<keyword>")
 def search_stock(keyword):
@@ -56,10 +61,13 @@ def get_stock(stock_code):
         try:
             holdings, deposit = kis_api.get_balance()
             qty = holdings.get(stock_code, 0)
+            _balance_cache['holdings'] = holdings
+            _balance_cache['deposit'] = deposit
         except Exception as e:
             print(f"잔고 조회 실패: {e}")
-            qty = 0
-            deposit = 0
+            holdings = _balance_cache.get('holdings', {})
+            deposit = _balance_cache.get('deposit', 0)
+            qty = holdings.get(stock_code, 0)
         results = stock_master.search_stocks(stock_code, limit=1)
         stock_name = results[0]["name"] if results else ""
         market = results[0]["market"] if results else ""

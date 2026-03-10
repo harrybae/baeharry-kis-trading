@@ -241,3 +241,29 @@ def stop_token_refresh_scheduler():
         _refresh_timer.cancel()
         _refresh_timer = None
         print(f"[{_now()}] 토큰 갱정 스케줄러 중지")
+
+
+def get_account_balance():
+    url = f"{config.BASE_URL}/uapi/domestic-stock/v1/trading/inquire-balance"
+    tr_id = "VTTC8434R" if config.IS_PAPER_TRADING else "TTTC8434R"
+    headers = _headers(tr_id)
+    params = {
+        "CANO": config.ACCOUNT_NUMBER,
+        "ACNT_PRDT_CD": config.ACCOUNT_SUFFIX,
+        "AFHR_FLPR_YN": "N",
+        "OFL_YN": "",
+        "INQR_DVSN": "02",
+        "UNPR_DVSN": "01",
+        "FUND_STTL_ICLD_YN": "N",
+        "FNCG_AMT_AUTO_RDPT_YN": "N",
+        "PRCS_DVSN": "01",
+        "CTX_AREA_FK100": "",
+        "CTX_AREA_NK100": "",
+    }
+    res = requests.get(url, headers=headers, params=params)
+    res.raise_for_status()
+    return res.json()
+
+def validate_stock_code(code):
+    import re
+    return bool(re.match(r'^\d{6}$', str(code).strip()))

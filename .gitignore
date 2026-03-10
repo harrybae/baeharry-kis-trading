@@ -6,3 +6,5 @@ __pycache__/
 .DS_Store
 trading_bot.log
 *.log
+.env
+.token_cache.json
