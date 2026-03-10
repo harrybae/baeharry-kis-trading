@@ -56,7 +56,8 @@ def get_stock(stock_code):
         try:
             holdings, deposit = kis_api.get_balance()
             qty = holdings.get(stock_code, 0)
-        except:
+        except Exception as e:
+            print(f"잔고 조회 실패: {e}")
             qty = 0
             deposit = 0
         results = stock_master.search_stocks(stock_code, limit=1)
