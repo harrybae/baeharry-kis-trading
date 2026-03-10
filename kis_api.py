@@ -157,13 +157,15 @@ def get_balance():
     res.raise_for_status()
     data = res.json()
     holdings = {}
+    avg_costs = {}
     for item in data.get("output1", []):
         code = item.get("pdno")
         qty = int(item.get("hldg_qty", 0))
         if code and qty > 0:
             holdings[code] = qty
+            avg_costs[code] = float(item.get("pchs_avg_pric", 0) or 0)
     deposit = int(data.get("output2", [{}])[0].get("dnca_tot_amt", 0))
-    return holdings, deposit
+    return holdings, deposit, avg_costs
 
 
 def place_order(stock_code, order_type, quantity, price=0):

@@ -59,14 +59,16 @@ def get_stock(stock_code):
         prev = int(out.get("stck_sdpr", 0))
         change = price - prev
         try:
-            holdings, deposit = kis_api.get_balance()
+            holdings, deposit, avg_costs = kis_api.get_balance()
             qty = holdings.get(stock_code, 0)
             _balance_cache['holdings'] = holdings
             _balance_cache['deposit'] = deposit
+            _balance_cache['avg_costs'] = avg_costs
         except Exception as e:
             print(f"잔고 조회 실패: {e}")
             holdings = _balance_cache.get('holdings', {})
             deposit = _balance_cache.get('deposit', 0)
+            avg_costs = _balance_cache.get('avg_costs', {})
             qty = holdings.get(stock_code, 0)
         results = stock_master.search_stocks(stock_code, limit=1)
         stock_name = results[0]["name"] if results else ""
@@ -509,7 +511,7 @@ def get_portfolio():
         import json as js, os
         # 잔고 조회
         try:
-            holdings, deposit = kis_api.get_balance()
+            holdings, deposit, avg_costs = kis_api.get_balance()
         except Exception as e:
             return jsonify({"holdings": [], "deposit": 0, "deposit_weight": 100, "total_eval": 0, "total": 0, "error": str(e)})
 
@@ -537,15 +539,37 @@ def get_portfolio():
         total_eval = 0
         for code, qty in holdings.items():
             bm = buy_map.get(code, {})
-            avg_cost = bm["cost"] / bm["qty"] if bm.get("qty", 0) > 0 else 0
+            # trades.json 우선, 없으면 KIS API 평균단가 사용
+            if bm.get("qty", 0) > 0:
+                avg_cost = bm["cost"] / bm["qty"]
+            else:
+                avg_cost = avg_costs.get(code, 0)
+            # 현재가 조회
+            try:
+                price = kis_api.get_current_price(code)
+            except Exception as e:
+                print(f"현재가 조회 실패 {code}: {e}")
+                price = 0
+            # 종목명 조회
+            try:
+                results = stock_master.search_stocks(code, limit=1)
+                name = results[0]["name"] if results else code
+            except:
+                name = code
+            eval_amt = price * qty
+            pnl = eval_amt - round(avg_cost) * qty if avg_cost > 0 else 0
+            pnl_pct = round(pnl / (round(avg_cost) * qty) * 100, 2) if avg_cost > 0 else 0
+            total_eval += eval_amt
             items.append({
-                "code": code, "name": code, "qty": qty,
-                "price": 0, "eval_amt": 0,
+                "code": code, "name": name, "qty": qty,
+                "price": price, "eval_amt": eval_amt,
                 "avg_cost": round(avg_cost),
-                "pnl": 0, "pnl_pct": 0, "weight": 0
+                "pnl": pnl, "pnl_pct": pnl_pct, "weight": 0
             })
 
         total = total_eval + deposit
+        for item in items:
+            item["weight"] = round(item["eval_amt"] / total * 100, 1) if total > 0 else 0
         return jsonify({
             "holdings": items,
             "deposit": deposit,
@@ -744,6 +768,153 @@ def run_screener():
             except: continue
 
         return jsonify({"results": results, "checked": checked, "total": len(stocks)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ===== 매매일지 =====
+TRADES_FILE = os.path.expanduser("~/trading/trades.json")
+
+def load_trades():
+    try:
+        if os.path.exists(TRADES_FILE):
+            with open(TRADES_FILE) as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"매매일지 로드 오류: {e}")
+    return {"trades": []}
+
+def save_trades_data(data):
+    with open(TRADES_FILE, "w") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@app.route("/api/trades", methods=["GET"])
+def get_trades():
+    data = load_trades()
+    trades = data.get("trades", [])
+    # 통계 계산
+    buy_trades = [t for t in trades if t.get("type") == "BUY"]
+    sell_trades = [t for t in trades if t.get("type") == "SELL"]
+    total = len(trades)
+    realized = sum(t.get("pnl", 0) for t in sell_trades)
+    wins = [t for t in sell_trades if t.get("pnl", 0) > 0]
+    losses = [t for t in sell_trades if t.get("pnl", 0) < 0]
+    win_rate = round(len(wins) / len(sell_trades) * 100, 1) if sell_trades else 0
+    avg_win = round(sum(t.get("pnl", 0) for t in wins) / len(wins)) if wins else 0
+    avg_loss = round(sum(t.get("pnl", 0) for t in losses) / len(losses)) if losses else 0
+    total_pnl_pct = round(realized / sum(t.get("amount", 0) for t in sell_trades) * 100, 2) if sell_trades else 0
+    # 종목별 거래비중
+    code_map = {}
+    for t in trades:
+        code = t.get("code", "")
+        if code not in code_map:
+            code_map[code] = {"code": code, "name": t.get("name", code), "count": 0, "amount": 0}
+        code_map[code]["count"] += 1
+        code_map[code]["amount"] += t.get("amount", 0)
+    # 누적 수익 추이
+    cumulative = []
+    cum = 0
+    for t in sorted(trades, key=lambda x: x.get("date", "")):
+        if t.get("type") == "SELL":
+            cum += t.get("pnl", 0)
+            cumulative.append({"date": t.get("date"), "pnl": cum})
+    return jsonify({
+        "trades": trades,
+        "stats": {
+            "total": total,
+            "realized": realized,
+            "win_rate": win_rate,
+            "avg_win": avg_win,
+            "avg_loss": avg_loss,
+            "total_pnl_pct": total_pnl_pct,
+        },
+        "by_code": list(code_map.values()),
+        "cumulative": cumulative
+    })
+
+@app.route("/api/trades", methods=["POST"])
+def save_trade():
+    data = load_trades()
+    trade = request.json
+    if not trade:
+        return jsonify({"error": "데이터 없음"}), 400
+    import uuid
+    trade["id"] = str(uuid.uuid4())[:8]
+    if "pnl" not in trade:
+        trade["pnl"] = 0
+    data["trades"].append(trade)
+    save_trades_data(data)
+    return jsonify({"ok": True, "id": trade["id"]})
+
+@app.route("/api/trades/<tid>", methods=["DELETE"])
+def delete_trade(tid):
+    data = load_trades()
+    data["trades"] = [t for t in data["trades"] if t.get("id") != tid]
+    save_trades_data(data)
+    return jsonify({"ok": True})
+
+@app.route("/api/trades/fetch", methods=["GET"])
+def fetch_trades():
+    try:
+        token = kis_api.get_access_token()
+        import requests as _req
+        headers = {
+            "Content-Type": "application/json",
+            "authorization": f"Bearer {token}",
+            "appkey": config.APP_KEY,
+            "appsecret": config.APP_SECRET,
+            "tr_id": "VTTC8001R" if config.IS_PAPER_TRADING else "TTTC8001R",
+        }
+        from datetime import datetime, timedelta
+        today = datetime.now().strftime("%Y%m%d")
+        week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y%m%d")
+        params = {
+            "CANO": config.ACCOUNT_NUMBER,
+            "ACNT_PRDT_CD": config.ACCOUNT_SUFFIX,
+            "INQR_STRT_DT": week_ago,
+            "INQR_END_DT": today,
+            "SLL_BUY_DVSN_CD": "00",
+            "INQR_DVSN": "00",
+            "PDNO": "",
+            "CCLD_DVSN": "01",
+            "ORD_GNO_BRNO": "",
+            "ODNO": "",
+            "INQR_DVSN_3": "00",
+            "INQR_DVSN_1": "",
+            "CTX_AREA_FK100": "",
+            "CTX_AREA_NK100": "",
+        }
+        res = _req.get(
+            f"{config.BASE_URL}/uapi/domestic-stock/v1/trading/inquire-daily-ccld",
+            headers=headers, params=params, timeout=10
+        )
+        res.raise_for_status()
+        items = res.json().get("output1", [])
+        data = load_trades()
+        existing_ids = {t.get("kis_id") for t in data["trades"] if t.get("kis_id")}
+        added = 0
+        for item in items:
+            kid = item.get("odno", "")
+            if kid in existing_ids:
+                continue
+            trade = {
+                "id": kid[:8] if kid else str(uuid.uuid4())[:8],
+                "kis_id": kid,
+                "date": item.get("ord_dt", ""),
+                "code": item.get("pdno", ""),
+                "name": item.get("prdt_name", ""),
+                "type": "BUY" if item.get("sll_buy_dvsn_cd") == "02" else "SELL",
+                "qty": int(item.get("ccld_qty", 0)),
+                "price": int(item.get("ccld_unpr3", 0)),
+                "amount": int(item.get("ccld_qty", 0)) * int(item.get("ccld_unpr3", 0)),
+                "fee": 0,
+                "pnl": 0,
+                "memo": "KIS 자동"
+            }
+            data["trades"].append(trade)
+            added += 1
+        save_trades_data(data)
+        return jsonify({"ok": True, "added": added})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
