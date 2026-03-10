@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import os
+import threading
 from datetime import datetime
 import config
 
@@ -9,28 +10,46 @@ TOKEN_FILE = os.path.expanduser("~/trading/.token_cache.json")
 
 _access_token = None
 _token_expires = 0
+_token_refresh_count = 0
+_token_last_issued = 0
+_token_lock = threading.Lock()
 
-def get_access_token():
-    global _access_token, _token_expires
+TOKEN_REFRESH_INTERVAL = int(os.environ.get("KIS_TOKEN_REFRESH_INTERVAL", "7200"))
+MAX_TOKEN_REFRESH_PER_HOUR = int(os.environ.get("KIS_MAX_TOKEN_REFRESH", "5"))
 
-    # 메모리 캐시 확인
-    if _access_token and time.time() < _token_expires:
-        return _access_token
+def _reset_token_cache():
+    global _access_token, _token_expires, _token_refresh_count
+    with _token_lock:
+        _access_token = None
+        _token_expires = 0
 
-    # 파일 캐시 확인
+def force_token_reset():
+    _reset_token_cache()
     if os.path.exists(TOKEN_FILE):
         try:
-            with open(TOKEN_FILE, 'r') as f:
-                cache = json.load(f)
-            if cache.get('expires') and time.time() < cache['expires']:
-                _access_token = cache['token']
-                _token_expires = cache['expires']
-                print(f"[{_now()}] 토큰 캐시 사용")
-                return _access_token
-        except:
-            pass
+            os.remove(TOKEN_FILE)
+            print(f"[{_now()}] 토큰 캐시 파일 삭제 완료")
+        except OSError as e:
+            print(f"[{_now()}] 토큰 캐시 파일 삭제 실패: {e}")
+    print(f"[{_now()}] 토큰 강제 초기화 완료")
 
-    # 새 토큰 발급
+def get_token_refresh_count():
+    return _token_refresh_count
+
+def _can_refresh_token():
+    global _token_last_issued
+    now = time.time()
+    if now - _token_last_issued < 3600:
+        return _token_refresh_count < MAX_TOKEN_REFRESH_PER_HOUR
+    return True
+
+def _issue_new_token():
+    global _access_token, _token_expires, _token_refresh_count, _token_last_issued
+    
+    if not _can_refresh_token():
+        print(f"[{_now()}] 토큰 발급 횟수 초과 (1시간内有 {MAX_TOKEN_REFRESH_PER_HOUR}회 제한)")
+        raise Exception("토큰 발급 횟수 초과")
+    
     url = f"{config.BASE_URL}/oauth2/tokenP"
     headers = {"Content-Type": "application/json"}
     body = {
@@ -44,16 +63,38 @@ def get_access_token():
 
     _access_token = data["access_token"]
     _token_expires = time.time() + int(data.get("expires_in", 86400)) - 300
+    _token_refresh_count += 1
+    _token_last_issued = time.time()
 
-    # 파일에 저장
     try:
         with open(TOKEN_FILE, 'w') as f:
             json.dump({'token': _access_token, 'expires': _token_expires}, f)
-    except:
-        pass
+    except IOError as e:
+        print(f"[{_now()}] 토큰 캐시 저장 실패: {e}")
 
-    print(f"[{_now()}] 토큰 발급 완료")
+    print(f"[{_now()}] 토큰 발급 완료 (발급횟수: {_token_refresh_count})")
     return _access_token
+
+def get_access_token():
+    global _access_token, _token_expires
+
+    with _token_lock:
+        if _access_token and time.time() < _token_expires:
+            return _access_token
+
+    if os.path.exists(TOKEN_FILE):
+        try:
+            with open(TOKEN_FILE, 'r') as f:
+                cache = json.load(f)
+            if cache.get('expires') and time.time() < cache['expires']:
+                _access_token = cache['token']
+                _token_expires = cache['expires']
+                print(f"[{_now()}] 토큰 캐시 사용")
+                return _access_token
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"[{_now()}] 토큰 캐시 읽기 실패: {e}")
+
+    return _issue_new_token()
 
 
 def _headers(tr_id):
@@ -155,11 +196,48 @@ def get_stock_name(stock_code):
     params = {"PRDT_TYPE_CD": "300", "PDNO": stock_code}
     try:
         res = requests.get(url, headers=headers, params=params)
+        res.raise_for_status()
         output = res.json().get("output", {})
         return output.get("prdt_abrv_name") or output.get("prdt_name") or stock_code
-    except:
+    except requests.RequestException as e:
+        print(f"[{_now()}] 종목명 조회 실패: {e}")
         return stock_code
 
 
 def _now():
     return datetime.now().strftime("%H:%M:%S")
+
+_refresh_timer = None
+
+def start_token_refresh_scheduler(interval_seconds=None):
+    global _refresh_timer
+    if interval_seconds is None:
+        interval_seconds = TOKEN_REFRESH_INTERVAL
+    
+    def _refresh_loop():
+        global _refresh_timer
+        try:
+            print(f"[{_now()}] 토큰 정기 갱신 시작 (주기: {interval_seconds}초)")
+            force_token_reset()
+            get_access_token()
+        except Exception as e:
+            print(f"[{_now()}] 토큰 정기 갱신 실패: {e}")
+        
+        _refresh_timer = threading.Timer(interval_seconds, _refresh_loop)
+        _refresh_timer.daemon = True
+        _refresh_timer.start()
+    
+    if _refresh_timer is not None:
+        _refresh_timer.cancel()
+    
+    _refresh_timer = threading.Timer(10, _refresh_loop)
+    _refresh_timer.daemon = True
+    _refresh_timer.start()
+    print(f"[{_now()}] 토큰 갱신 스케줄러 시작 (주기: {interval_seconds}초)")
+
+def stop_token_refresh_scheduler():
+    global _refresh_timer
+    if _refresh_timer is not None:
+        _refresh_timer.cancel()
+        _refresh_timer = None
+        print(f"[{_now()}] 토큰 갱정 스케줄러 중지")

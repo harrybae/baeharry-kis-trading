@@ -263,6 +263,35 @@
         .auto-log-title{font-size:.72em;font-weight:700;color:var(--text3);margin-bottom:8px;}
         .auto-log-item{font-size:.78em;color:var(--text2);padding:4px 0;border-bottom:1px solid var(--border);font-family:'JetBrains Mono',monospace;}
         .auto-log-item:last-child{border-bottom:none;}
+        /* 학습 탭 */
+        .learn-cat-title{font-size:.72em;font-weight:700;color:var(--text3);padding:8px 10px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;border-radius:6px;display:flex;align-items:center;justify-content:space-between;}
+        .learn-cat-title:hover{background:var(--surface);color:var(--text);}
+        .learn-cat-title.open{color:var(--accent2);}
+        .learn-items{display:none;padding-left:4px;}
+        .learn-items.show{display:block;}
+        .learn-item{padding:7px 10px;font-size:.82em;color:var(--text2);cursor:pointer;border-radius:6px;display:flex;align-items:center;gap:8px;line-height:1.3;}
+        .learn-item:hover{background:var(--surface);color:var(--text);}
+        .learn-item.active{background:rgba(59,130,246,.15);color:var(--accent2);font-weight:700;}
+        .learn-body{font-size:.85em;color:var(--text2);line-height:1.8;margin-bottom:20px;}
+        .learn-body h4{color:var(--text);font-size:.95em;margin:14px 0 6px;font-weight:700;}
+        .learn-body ul{padding-left:18px;margin:6px 0;}
+        .learn-body li{margin-bottom:4px;}
+        .learn-body .highlight{background:rgba(59,130,246,.1);border-left:3px solid var(--accent);padding:10px 14px;border-radius:0 6px 6px 0;margin:10px 0;color:var(--text);}
+        .tts-btn{background:var(--accent);border:none;border-radius:7px;color:#fff;padding:8px 16px;font-size:.82em;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+        .tts-btn:hover{background:#2563eb;}
+        .tts-btn.stop{background:#dc2626;}
+        .tts-btn.dl{background:var(--surface);border:1px solid var(--border);color:var(--text2);}
+        .yt-item{display:flex;gap:10px;align-items:center;padding:8px 10px;background:var(--surface);border-radius:7px;text-decoration:none;border:1px solid var(--border);margin-bottom:6px;}
+        .yt-item:hover{border-color:#ff0000;}
+        .yt-name{font-size:.82em;font-weight:600;color:var(--text);display:block;}
+        .yt-ch{font-size:.75em;color:var(--text3);}
+        .learn-nav-btn{background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text2);padding:7px 14px;font-size:.82em;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
+        .learn-nav-btn:hover{border-color:var(--accent);color:var(--accent2);}
+.dash-search-bar{display:flex;align-items:center;gap:8px;padding:14px 0 10px 0;}
+.sh{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;padding:4px 0;}
+        .sh-left{min-width:180px;}
+        .sh-price{text-align:center;}
+        .sh-search{display:flex;align-items:center;gap:8px;}
         @media(max-width:900px){.info-line{grid-template-columns:1fr;}.pm{font-size:1.8em;}}
     </style>
 </head>
@@ -275,13 +304,7 @@
         <button class="tab-btn" id="tabWatch" onclick="switchTab('watch')">📺 전광판</button>
         <button class="tab-btn" id="tabTrade" onclick="switchTab('trade')">📒 매매일지</button>
         <button class="tab-btn" id="tabAuto" onclick="switchTab('auto')">🤖 자동매매</button>
-    </div>
-    <div class="sw">
-        <div class="siw">
-            <input type="text" class="si" id="stockCode" placeholder="종목코드 또는 종목명 검색" maxlength="20" autocomplete="off">
-            <div class="sgbox" id="sgbox"></div>
-        </div>
-        <button class="sb" id="sb">검색</button>
+        <button class="tab-btn" id="tabLearn" onclick="switchTab('learn')">📚 주식 공부</button>
     </div>
 </div>
 <div class="market-bar" id="marketBar">
@@ -295,7 +318,14 @@
 <div class="main">
     <div id="dash-wrap">
     <div id="rc">
-        <div class="welcome"><div class="wi">🔍</div><div class="wt">종목코드 또는 종목명을 입력하여 조회하세요</div></div>
+        <div class="welcome">
+            <div class="wi">📈</div>
+            <div class="wt">종목코드 또는 종목명을 입력하여 조회하세요</div>
+            <div style="display:flex;gap:8px;margin-top:16px;justify-content:center">
+                <div class="siw" style="max-width:340px"><input type="text" class="si" id="stockCodeW" placeholder="예) 005930 또는 삼성전자" maxlength="20" autocomplete="off" onkeyup="syncSearch(this.value)" onkeydown="handleWelcomeKey(event)"><div class="sgbox" id="sgboxW"></div></div>
+                <button class="sb" onclick="syncAndSearch()">검색</button>
+            </div>
+        </div>
     </div>
     </div><!-- dash-wrap -->
     <div class="watch-wrap" id="watch-wrap">
@@ -526,56 +556,76 @@
             </div>
         </div>
     </div>
+    <div id="learn-wrap" style="display:none;padding:16px">
+        <div style="height:3px;background:var(--border);border-radius:2px;margin-bottom:16px;overflow:hidden"><div id="learnProgressFill" style="height:100%;background:linear-gradient(90deg,var(--accent),#10b981);width:0%;transition:width .4s"></div></div>
+        <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;min-height:600px">
+            <div id="learnSidebar" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;overflow-y:auto;max-height:700px"></div>
+            <div id="learnContent" style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:20px 24px">
+                <div style="text-align:center;padding:60px 0;color:var(--text3)"><div style="font-size:2em;margin-bottom:12px">📚</div><div style="font-size:.95em">왼쪽 목록에서 학습 주제를 선택하세요</div></div>
+            </div>
+        </div>
+    </div>
 </div>
 <script>
 var timer=null,sidx=-1,sitems=[],isOpen=false,comp=false;
 var ci=null,cc='',ctype='line',cperiod={type:'D',days:90};
-var inp=document.getElementById('stockCode');
-var sgb=document.getElementById('sgbox');
-var sb=document.getElementById('sb');
+var inp=null,sgb=null,sb=null;
 var lp=[
     {label:'1일',type:'D',days:1},{label:'1주일',type:'D',days:7},{label:'3개월',type:'D',days:90},
     {label:'1년',type:'W',days:52},{label:'3년',type:'W',days:156},{label:'5년',type:'M',days:60},{label:'10년',type:'M',days:120}
 ];
 var cp=[{label:'일봉',type:'D',days:60},{label:'주봉',type:'W',days:52},{label:'월봉',type:'M',days:60}];
 
-document.addEventListener('click',function(e){if(!inp.contains(e.target)&&!sgb.contains(e.target)&&!sb.contains(e.target))hideSug();});
-inp.addEventListener('compositionstart',function(){comp=true;});
-inp.addEventListener('compositionend',function(){comp=false;var v=inp.value.trim();if(v)schedSug(v);});
-inp.addEventListener('input',function(){if(comp)return;var v=inp.value.trim();sidx=-1;if(!v||/^\d+$/.test(v)){hideSug();return;}schedSug(v);});
+function rebindSearch(){
+    inp=document.getElementById('stockCode');
+    sgb=document.getElementById('sgbox');
+    sb=document.getElementById('sb');
+    if(!inp||!sgb||!sb) return;
+    var newInp=inp.cloneNode(true); inp.parentNode.replaceChild(newInp,inp); inp=newInp;
+    var newSb=sb.cloneNode(true); sb.parentNode.replaceChild(newSb,sb); sb=newSb;
+    inp.addEventListener('compositionstart',function(){comp=true;});
+    inp.addEventListener('compositionend',function(){comp=false;var v=inp.value.trim();if(v)schedSug(v);});
+    inp.addEventListener('input',function(){if(comp)return;var v=inp.value.trim();sidx=-1;if(!v||/^\d+$/.test(v)){hideSug();return;}schedSug(v);});
+    inp.addEventListener('keydown',function(e){
+        if(e.key==='ArrowDown'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.min(sidx+1,sitems.length-1);updA();}
+        else if(e.key==='ArrowUp'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.max(sidx-1,-1);updA();}
+        else if(e.key==='Enter'){if(comp)return;e.preventDefault();clearTimeout(timer);if(isOpen&&sidx>=0&&sitems[sidx])selItem(sitems[sidx]);else{hideSug();cvtSearch();}}
+        else if(e.key==='Escape')hideSug();
+    });
+    sb.addEventListener('click',function(){hideSug();clearTimeout(timer);cvtSearch();});
+    document.addEventListener('click',function(e){
+        if(inp&&sgb&&sb&&!inp.contains(e.target)&&!sgb.contains(e.target)&&!sb.contains(e.target))hideSug();
+    });
+}
 function schedSug(v){clearTimeout(timer);timer=setTimeout(function(){fetch('/api/search/'+encodeURIComponent(v)).then(function(r){return r.json();}).then(showSug).catch(function(){});},200);}
-sb.addEventListener('click',function(){hideSug();clearTimeout(timer);cvtSearch();});
-inp.addEventListener('keydown',function(e){
-    if(e.key==='ArrowDown'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.min(sidx+1,sitems.length-1);updA();}
-    else if(e.key==='ArrowUp'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.max(sidx-1,-1);updA();}
-    else if(e.key==='Enter'){if(comp)return;e.preventDefault();clearTimeout(timer);if(isOpen&&sidx>=0&&sitems[sidx])selItem(sitems[sidx]);else{hideSug();cvtSearch();}}
-    else if(e.key==='Escape')hideSug();
-});
-function updA(){sgb.querySelectorAll('.sgi').forEach(function(el,i){el.classList.toggle('active',i===sidx);if(i===sidx)el.scrollIntoView({block:'nearest'});});}
+function updA(){if(!sgb)return;sgb.querySelectorAll('.sgi').forEach(function(el,i){el.classList.toggle('active',i===sidx);if(i===sidx)el.scrollIntoView({block:'nearest'});});}
 function selItem(item){inp.value=item.code;hideSug();clearTimeout(timer);doSearch();}
 function showSug(items){
     sitems=items||[];sidx=-1;if(!sitems.length){hideSug();return;}
     var h='';for(var i=0;i<Math.min(sitems.length,8);i++){var mc=sitems[i].market==='KOSPI'?'mk-kospi':'mk-kosdaq';h+='<div class="sgi" data-i="'+i+'"><span class="sgn">'+sitems[i].name+'</span><span class="sgr"><span class="sgc">'+sitems[i].code+'</span><span class="sgm '+mc+'">'+sitems[i].market+'</span></span></div>';}
-    sgb.innerHTML=h;sgb.style.display='block';isOpen=true;
+    if(!sgb)return;sgb.innerHTML=h;sgb.style.display='block';isOpen=true;
     sgb.querySelectorAll('.sgi').forEach(function(el){
         el.addEventListener('mouseenter',function(){sidx=parseInt(this.getAttribute('data-i'));updA();});
         el.addEventListener('mousedown',function(e){e.preventDefault();selItem(sitems[parseInt(this.getAttribute('data-i'))]);});
     });
 }
-function hideSug(){sgb.style.display='none';isOpen=false;sitems=[];sidx=-1;}
+function hideSug(){if(sgb)sgb.style.display='none';isOpen=false;sitems=[];sidx=-1;}
 function cvtSearch(){
+    if(!inp)return;
     var v=inp.value.trim();if(!v){alert('종목코드 또는 종목명을 입력해 주세요.');return;}
     if(/^\d+$/.test(v)){doSearch();return;}
     fetch('/api/search/'+encodeURIComponent(v)).then(function(r){return r.json();}).then(function(items){
         if(items&&items.length>0){inp.value=items[0].code;doSearch();}else alert('종목을 찾을 수 없습니다: '+v);
     }).catch(function(){doSearch();});
 }
-function doSearch(){
+function doSearch(initCode){
     hideSug();clearTimeout(timer);
-    var code=inp.value.trim();if(!code)return;
+    var code=initCode||(inp?inp.value.trim():'');
+    if(!code)return;
     cc=code;ctype='line';cperiod=lp[2];
     var rc=document.getElementById('rc');
-    sb.disabled=true;sb.textContent='조회중...';
+    if(!rc)return;
+    if(sb){sb.disabled=true;sb.textContent='조회중...';}
     rc.innerHTML='<div class="sbox">⏳ 조회 중...</div>';
     Promise.all([
         fetch('/api/stock/'+code).then(function(r){return r.json();}),
@@ -583,9 +633,18 @@ function doSearch(){
     ]).then(function(res){
         var d=res[0],cd=res[1];
         if(d.error){rc.innerHTML='<div class="sbox">❌ '+d.error+'</div>';}
-        else{renderResult(d);requestAnimationFrame(function(){requestAnimationFrame(function(){renderChart(cd);});});loadNews(d.stock_name||d.stock_code);}
-        sb.disabled=false;sb.textContent='검색';
-    }).catch(function(e){rc.innerHTML='<div class="sbox">❌ '+e.message+'</div>';sb.disabled=false;sb.textContent='검색';});
+        else{
+            renderResult(d);
+            rebindSearch();
+            if(inp)inp.value=code;
+            requestAnimationFrame(function(){requestAnimationFrame(function(){renderChart(cd);});});
+            loadNews(d.stock_name||d.stock_code);
+        }
+        if(sb){sb.disabled=false;sb.textContent='검색';}
+    }).catch(function(e){
+        rc.innerHTML='<div class="sbox">❌ '+e.message+'</div>';
+        if(sb){sb.disabled=false;sb.textContent='검색';}
+    });
 }
 
 function n(v){return v!==null&&v!==undefined&&v!==''?Number(v).toLocaleString():'-';}
@@ -605,8 +664,18 @@ function renderResult(d){
 
     document.getElementById('rc').innerHTML=
     '<div class="sh">'+
-        '<div><div class="st"><span class="sname">'+(d.stock_name||d.stock_code)+'</span><span class="scode">'+d.stock_code+'</span>'+(d.market?'<span class="sgm '+mc+'">'+d.market+'</span>':'')+' </div><div class="sdate">'+d.timestamp+' 기준</div></div>'+
-        '<div class="ps"><div class="pm '+pc+'">'+n(d.price)+'</div><div class="pch">'+(abs?'<span class="cb '+cc2+'">'+sign+' '+n(abs)+'</span>':'')+(pct?'<span class="cb '+cc2+'">'+pct+'</span>':'')+' </div></div>'+
+        '<div class="sh-left">'+
+            '<div class="st"><span class="sname">'+(d.stock_name||d.stock_code)+'</span><span class="scode">'+d.stock_code+'</span>'+(d.market?'<span class="sgm '+mc+'">'+d.market+'</span>':'')+' </div>'+
+            '<div class="sdate">'+d.timestamp+' 기준</div>'+
+        '</div>'+
+        '<div class="sh-price">'+
+            '<div class="pm '+pc+'">'+n(d.price)+'</div>'+
+            '<div class="pch">'+(abs?'<span class="cb '+cc2+'">'+sign+' '+n(abs)+'</span>':'')+(pct?'<span class="cb '+cc2+'">'+pct+'</span>':'')+' </div>'+
+        '</div>'+
+        '<div class="sh-search">'+
+            '<div class="siw"><input type="text" class="si" id="stockCode" placeholder="종목코드 또는 종목명" maxlength="20" autocomplete="off"><div class="sgbox" id="sgbox"></div></div>'+
+            '<button class="sb" id="sb" onclick="doSearch()">검색</button>'+
+        '</div>'+
     '</div>'+
     /* 정보 3칸: 거래정보 | 내계좌 | 투자정보 */
     '<div class="info-line">'+
@@ -780,13 +849,11 @@ function renderLine(canvas,data){
     var datasets=[
         {label:'종가',data:closes,borderColor:lc,backgroundColor:fc,borderWidth:2,pointRadius:0,pointHoverRadius:4,tension:.3,fill:true,order:2}
     ];
-    console.log('bb indicator:', indicators.bb, 'sample bb_upper:', data[data.length-1] ? data[data.length-1].bb_upper : 'no data');
     if(indicators.bb){
         datasets.push({label:'BB상단',data:data.map(function(d){return d.bb_upper;}),borderColor:'#60a5fa',borderWidth:1.5,pointRadius:0,tension:.3,fill:false,order:1,yAxisID:'y'});
         datasets.push({label:'BB중간',data:data.map(function(d){return d.bb_mid;}),borderColor:'#60a5fa',borderWidth:1,pointRadius:0,tension:.3,fill:false,order:1,yAxisID:'y'});
         datasets.push({label:'BB하단',data:data.map(function(d){return d.bb_lower;}),borderColor:'#60a5fa',borderWidth:1.5,pointRadius:0,tension:.3,fill:false,order:1,yAxisID:'y'});
     }
-    console.log('datasets count:', datasets.length, 'bb dataset:', datasets.length > 1 ? datasets[1].data.slice(-3) : 'none');
     ci=new Chart(canvas,{type:'line',
         data:{labels:labels,datasets:datasets},
         options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
@@ -824,10 +891,10 @@ function renderCandle(canvas,data){
 var quantStocks = ['005930','000660','035420'];
 
 function switchTab(tab) {
-    ['tabDash','tabQuant','tabWatch','tabTrade','tabAuto'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
+    ['tabDash','tabQuant','tabWatch','tabTrade','tabAuto','tabLearn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
     var el = document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el) el.classList.add('active');
-    ['dash-wrap','quant-wrap','watch-wrap','trade-wrap','auto-wrap'].forEach(function(id){
+    ['dash-wrap','quant-wrap','watch-wrap','trade-wrap','auto-wrap','learn-wrap'].forEach(function(id){
         var el = document.getElementById(id);
         if(el) el.style.display = 'none';
     });
@@ -837,6 +904,7 @@ function switchTab(tab) {
     if(tab==='watch') { loadWatchlist(); loadAlerts(); }
     if(tab==='trade') { loadTrades(); loadPortfolio(); }
     if(tab==='auto') { loadAutoConditions(); }
+    if(tab==='learn') { initLearn(); }
 }
 
 function renderQuantTags() {
@@ -1601,10 +1669,13 @@ var autoTypeNames = {
 };
 
 function loadAutoConditions() {
-    fetch('/api/autotradeions').then(function(r){return r.json();}).then(function(d){
-        autoConditions = d.conditions || [];
-        renderAutoTable();
-    });
+    // NOTE: /api/autoconditions endpoint not implemented yet
+    autoConditions = [];
+    renderAutoTable();
+    // fetch('/api/autoconditions').then(function(r){return r.json();}).then(function(d){
+    //     autoConditions = d.conditions || [];
+    //     renderAutoTable();
+    // });
 }
 
 function addAutoCondition() {
@@ -1642,9 +1713,12 @@ function deleteAutoCondition(id) {
 }
 
 function saveAutoConditions() {
-    fetch('/api/autotradeions', {method:'POST', headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({conditions:autoConditions})})
-        .then(function(){ renderAutoTable(); });
+    // NOTE: /api/autoconditions endpoint not implemented yet
+    // Stub to prevent errors - just update local state
+    renderAutoTable();
+    // fetch('/api/autoconditions', {method:'POST', headers:{'Content-Type':'application/json'},
+    //     body:JSON.stringify({conditions:autoConditions})})
+    //     .then(function(){ renderAutoTable(); });
 }
 
 function renderAutoTable() {
@@ -1679,20 +1753,23 @@ function renderAutoTable() {
 }
 
 function checkAutoTrade() {
-    fetch('/api/autotradeions/check').then(function(r){return r.json();}).then(function(d){
-        var time = d.checked_at || '';
-        autoConditions = autoConditions.map(function(c){
-            return Object.assign({},c,{last_check: time});
-        });
-        renderAutoTable();
-        if(d.triggered && d.triggered.length) {
-            d.triggered.forEach(function(t){
-                addAutoLog(t.msg, time);
-            });
-        } else {
-            addAutoLog('체크 완료 - 발생 조건 없음', time);
-        }
-    });
+    // NOTE: /api/autoconditions/check endpoint not implemented yet
+    var time = new Date().toLocaleTimeString();
+    addAutoLog('자동매매 체크: API 엔드포인트 미구현', time);
+    // fetch('/api/autoconditions/check').then(function(r){return r.json();}).then(function(d){
+    //     var time = d.checked_at || '';
+    //     autoConditions = autoConditions.map(function(c){
+    //         return Object.assign({},c,{last_check: time});
+    //     });
+    //     renderAutoTable();
+    //     if(d.triggered && d.triggered.length) {
+    //         d.triggered.forEach(function(t){
+    //             addAutoLog(t.msg, time);
+    //         });
+    //     } else {
+    //         addAutoLog('체크 완료 - 발생 조건 없음', time);
+    //     }
+    // });
 }
 
 function addAutoLog(msg, time) {
@@ -1719,9 +1796,227 @@ function startAutoTimer() {
     }, 1000);
 }
 
-window.onload=function(){
-    inp.value='005930';
+
+// ===== 주식 학습 =====
+var learnCurriculum = [
+  {cat:"🌱 주식 기초", items:[
+    {id:"l01",title:"주식이란 무엇인가?",desc:"주식의 개념과 왜 기업은 주식을 발행하는지 알아봅니다.",
+     body:'<h4>주식의 정의</h4>주식이란 기업이 자금을 조달하기 위해 발행하는 소유권 증서입니다. 주식을 보유한 사람을 주주라고 하며, 기업의 이익과 성장에 따라 수익을 얻을 수 있습니다.<div class="highlight">핵심: 주식을 산다는 것은 그 기업의 일부를 소유하는 것입니다.</div><h4>왜 기업은 주식을 발행할까?</h4><ul><li>사업 확장을 위한 자금 조달</li><li>은행 대출 없이 대규모 투자 가능</li><li>기업 가치를 시장에서 평가받음</li></ul>',
+     yt:[{name:"주식 기초 개념 완전정복",ch:"삼프로TV",url:"https://www.youtube.com/results?search_query=주식+기초+개념+삼프로TV"}]},
+    {id:"l02",title:"증권시장의 구조",desc:"KOSPI, KOSDAQ의 차이와 거래 구조를 이해합니다.",
+     body:'<h4>한국 증권시장 구조</h4><ul><li><b>KOSPI</b>: 유가증권시장. 삼성전자, 현대차 등 대형 우량기업 상장</li><li><b>KOSDAQ</b>: 코스닥시장. 중소·벤처기업 위주, 성장주 많음</li></ul><div class="highlight">KOSPI는 안정성, KOSDAQ은 성장성에 초점</div><h4>거래 시간</h4><ul><li>정규장: 09:00 ~ 15:30</li><li>시간외: 15:40 ~ 18:00</li></ul>',
+     yt:[{name:"KOSPI KOSDAQ 차이점",ch:"주식쟁이남대리",url:"https://www.youtube.com/results?search_query=KOSPI+KOSDAQ+차이"}]},
+    {id:"l03",title:"주문 방법과 체결 원리",desc:"시장가, 지정가 주문의 차이와 호가창 읽는 법을 배웁니다.",
+     body:'<h4>주문 종류</h4><ul><li><b>시장가</b>: 즉시 체결, 가격 불확실</li><li><b>지정가</b>: 원하는 가격 지정, 미체결 가능</li></ul><div class="highlight">초보자는 지정가 주문으로 천천히 매매하는 것이 안전합니다.</div>',
+     yt:[{name:"주식 주문방법 완전정복",ch:"주식초보",url:"https://www.youtube.com/results?search_query=주식+주문방법+시장가+지정가"}]},
+  ]},
+  {cat:"📊 기술적 분석", items:[
+    {id:"l04",title:"캔들차트 읽기",desc:"양봉·음봉의 의미와 주요 캔들 패턴을 학습합니다.",
+     body:'<h4>캔들의 구조</h4><ul><li><b>양봉(빨강)</b>: 시가보다 종가가 높음</li><li><b>음봉(파랑)</b>: 시가보다 종가가 낮음</li><li><b>꼬리</b>: 고가와 저가를 나타냄</li></ul><div class="highlight">긴 아래꼬리 = 매수세 강함 / 긴 위꼬리 = 매도세 강함</div>',
+     yt:[{name:"캔들차트 완전정복",ch:"주식유치원",url:"https://www.youtube.com/results?search_query=캔들차트+읽기+완전정복"}]},
+    {id:"l05",title:"이동평균선 활용",desc:"MA5/20/60/120의 의미와 골든크로스·데드크로스 전략을 배웁니다.",
+     body:'<h4>이동평균선</h4><ul><li><b>MA5</b>: 단기(1주)</li><li><b>MA20</b>: 중단기(1개월)</li><li><b>MA60</b>: 중장기(3개월)</li><li><b>MA120</b>: 장기(6개월)</li></ul><div class="highlight">골든크로스: 단기선이 장기선을 상향 돌파 → 매수 신호</div>',
+     yt:[{name:"이동평균선 완전정복",ch:"주식쟁이남대리",url:"https://www.youtube.com/results?search_query=이동평균선+골든크로스"}]},
+    {id:"l06",title:"RSI와 MACD",desc:"과매수/과매도 지표 RSI와 추세 지표 MACD를 마스터합니다.",
+     body:'<h4>RSI</h4>0~100 값으로 과매수/과매도 판단.<ul><li>70 이상: 과매수 → 매도 고려</li><li>30 이하: 과매도 → 매수 고려</li></ul><div class="highlight">RSI 30 이하 반등 시 강력한 매수 신호!</div><h4>MACD</h4>MACD선이 시그널선 상향 돌파 → 매수, 하향 돌파 → 매도',
+     yt:[{name:"RSI MACD 실전 활용법",ch:"주식유치원",url:"https://www.youtube.com/results?search_query=RSI+MACD+주식+실전활용"}]},
+    {id:"l07",title:"볼린저밴드",desc:"볼린저밴드로 변동성을 측정하고 매매 시점을 잡는 법.",
+     body:'<h4>볼린저밴드 구성</h4><ul><li>중간선: 20일 이동평균</li><li>상단: 중간 + 2표준편차</li><li>하단: 중간 - 2표준편차</li></ul><div class="highlight">하단 터치 → 과매도 반등 가능 / 밴드 수축 → 큰 움직임 임박</div>',
+     yt:[{name:"볼린저밴드 실전 매매법",ch:"주식쟁이남대리",url:"https://www.youtube.com/results?search_query=볼린저밴드+실전+매매법"}]},
+  ]},
+  {cat:"💰 기본적 분석", items:[
+    {id:"l08",title:"PER과 PBR",desc:"가장 기본적인 가치평가 지표를 완벽히 이해합니다.",
+     body:'<h4>PER (주가수익비율)</h4>주가 ÷ EPS(주당순이익). 낮을수록 저평가 가능성.<div class="highlight">PER 10 = 현재 이익으로 10년이면 주가 회수 가능</div><h4>PBR (주가순자산비율)</h4>주가 ÷ BPS. PBR 1 미만 = 청산가치보다 싸게 거래.',
+     yt:[{name:"PER PBR 완벽정리",ch:"삼프로TV",url:"https://www.youtube.com/results?search_query=PER+PBR+주식+완벽정리"}]},
+    {id:"l09",title:"재무제표 읽기",desc:"손익계산서, 재무상태표, 현금흐름표의 핵심을 파악합니다.",
+     body:'<h4>3대 재무제표</h4><ul><li><b>손익계산서</b>: 매출-비용=순이익</li><li><b>재무상태표</b>: 자산=부채+자본</li><li><b>현금흐름표</b>: 실제 현금 유출입</li></ul><div class="highlight">영업현금흐름 > 순이익 → 이익의 질이 높다는 신호</div>',
+     yt:[{name:"재무제표 보는 법",ch:"주식유치원",url:"https://www.youtube.com/results?search_query=재무제표+보는법+주식"}]},
+  ]},
+  {cat:"🤖 퀀트/시스템", items:[
+    {id:"l10",title:"퀀트 투자란?",desc:"데이터와 알고리즘으로 투자하는 퀀트의 기본 개념.",
+     body:'<h4>퀀트 투자</h4>감이 아닌 데이터와 수학으로 투자하는 방식.<div class="highlight">핵심: 감정 제거, 백테스트로 검증된 전략만 실행</div><h4>대표 전략</h4><ul><li>팩터 투자: PER/PBR/모멘텀으로 종목 선별</li><li>모멘텀: 최근 수익률 높은 종목 매수</li><li>평균회귀: 과도하게 하락한 종목 매수</li></ul>',
+     yt:[{name:"퀀트투자 입문",ch:"강환국",url:"https://www.youtube.com/results?search_query=퀀트투자+입문+강환국"}]},
+    {id:"l11",title:"백테스트와 전략 검증",desc:"과거 데이터로 전략을 검증하는 방법과 주의사항.",
+     body:'<h4>백테스트 핵심 지표</h4><ul><li><b>CAGR</b>: 연평균 복리수익률</li><li><b>MDD</b>: 최대낙폭</li><li><b>샤프지수</b>: 위험 대비 수익 (1 이상이면 양호)</li></ul><div class="highlight">오버피팅 주의! 과거에만 잘 맞는 전략은 미래에 통하지 않습니다.</div>',
+     yt:[{name:"백테스트 방법",ch:"강환국",url:"https://www.youtube.com/results?search_query=백테스트+방법+퀀트"}]},
+  ]},
+  {cat:"🛡️ 리스크 관리", items:[
+    {id:"l12",title:"포지션 사이징",desc:"한 종목에 얼마를 투자해야 하는지 결정하는 법.",
+     body:'<h4>원칙</h4><ul><li>한 종목에 전체 자산의 5~10% 이상 투자 금지</li><li>종목 분산: 10~20개 종목</li><li>섹터 분산: 한 섹터 집중 금지</li></ul><div class="highlight">아무리 좋은 전략도 올인하면 파산할 수 있습니다.</div>',
+     yt:[{name:"포지션 사이징 리스크관리",ch:"주식쟁이남대리",url:"https://www.youtube.com/results?search_query=주식+리스크관리+포지션사이징"}]},
+    {id:"l13",title:"손절과 익절 전략",desc:"감정 없이 손절하고 수익을 극대화하는 방법.",
+     body:'<h4>손절의 중요성</h4><ul><li>-10% 손실 회복에 +11.1% 필요</li><li>-50% 손실 회복에 +100% 필요</li></ul><div class="highlight">손절은 실패가 아닙니다. 더 큰 손실을 막는 자기 보호입니다.</div><h4>손절 방법</h4><ul><li>고정 손절: 매수가 대비 -5~8% 무조건</li><li>기술적 손절: 지지선 이탈 시</li></ul>',
+     yt:[{name:"손절 익절 전략",ch:"주식유치원",url:"https://www.youtube.com/results?search_query=주식+손절+익절+전략"}]},
+  ]},
+  {cat:"🧠 심리적 투자", items:[
+    {id:"l14",title:"매매 심리와 편향",desc:"투자를 망치는 심리적 편향과 극복법.",
+     body:'<h4>대표적인 편향</h4><ul><li><b>손실 회피</b>: 손실 고통이 이익 기쁨보다 2배</li><li><b>확증 편향</b>: 내 믿음을 지지하는 정보만 찾음</li><li><b>군중 심리</b>: 남들이 사면 나도 사고 싶음(FOMO)</li></ul><div class="highlight">버핏: 남들이 탐욕스러울 때 두려워하고, 남들이 두려워할 때 탐욕스러워라</div>',
+     yt:[{name:"주식 심리 매매편향",ch:"삼프로TV",url:"https://www.youtube.com/results?search_query=주식+심리+매매편향"}]},
+    {id:"l15",title:"투자 원칙 세우기",desc:"나만의 투자 원칙을 세우고 일관되게 지키는 방법.",
+     body:'<h4>원칙이 필요한 이유</h4>시장이 흔들릴 때 감정이 아닌 원칙으로 판단하기 위해서입니다.<div class="highlight">원칙 없는 투자 = 도박</div><h4>예시</h4><ul><li>매수: PER 10 이하, RSI 40 이하일 때만</li><li>매도: 목표가 도달 또는 -8% 무조건 손절</li><li>자금: 생활비는 절대 투자 금지</li></ul>',
+     yt:[{name:"주식 투자원칙",ch:"삼프로TV",url:"https://www.youtube.com/results?search_query=주식+투자원칙+세우기"}]},
+  ]},
+  {cat:"🚀 고급 전략", items:[
+    {id:"l16",title:"ETF 투자 전략",desc:"ETF의 종류와 포트폴리오 활용법.",
+     body:'<h4>ETF란?</h4>여러 종목을 묶어 만든 펀드를 주식처럼 거래.<div class="highlight">장점: 분산투자 + 낮은 수수료 + 실시간 거래</div><h4>주요 ETF</h4><ul><li>KODEX 200: KOSPI 200 추종</li><li>TIGER 나스닥100: 미국 나스닥</li><li>KODEX 레버리지: 지수 2배(고위험)</li><li>KODEX 인버스: 하락 시 수익</li></ul>',
+     yt:[{name:"ETF 투자 완전정복",ch:"강환국",url:"https://www.youtube.com/results?search_query=ETF+투자+완전정복"}]},
+    {id:"l17",title:"공매도와 헤징",desc:"공매도 원리와 포트폴리오 헤징 전략.",
+     body:'<h4>공매도란?</h4>주식을 빌려 먼저 팔고 나중에 싸게 사서 갚아 차익을 남기는 방식.<div class="highlight">개인은 공매도보다 인버스 ETF로 하락에 베팅하는 것이 현실적입니다.</div><h4>헤징 전략</h4><ul><li>인버스 ETF: 하락 위험 헤지</li><li>현금 비중 조절: 고평가 시 현금 증가</li></ul>',
+     yt:[{name:"공매도 헤징 전략",ch:"삼프로TV",url:"https://www.youtube.com/results?search_query=공매도+헤징전략+주식"}]},
+  ]},
+];
+
+var currentLearnId = null;
+var ttsPlaying = false;
+
+function initLearn() {
+    var completed = {};
+    try { completed = JSON.parse(localStorage.getItem('learnDone')||'{}'); } catch(e){}
+    var total = learnCurriculum.reduce(function(s,c){return s+c.items.length;},0);
+    var done = Object.keys(completed).length;
+    var fill = document.getElementById('learnProgressFill');
+    if(fill) fill.style.width = (done/total*100)+'%';
+    var html = '';
+    learnCurriculum.forEach(function(cat,ci){
+        var dc = cat.items.filter(function(i){return completed[i.id];}).length;
+        html += '<div style="margin-bottom:6px">';
+        html += '<div class="learn-cat-title" id="lcat'+ci+'" onclick="toggleLcat('+ci+')">';
+        html += cat.cat+' <span style="font-size:.7em;color:var(--text3)">'+dc+'/'+cat.items.length+'</span></div>';
+        html += '<div class="learn-items" id="lcatItems'+ci+'">';
+        cat.items.forEach(function(item,ii){
+            var liClass = 'learn-item'+(currentLearnId===item.id?' active':'');
+            html += '<div class="'+liClass+'" id="li-'+item.id+'" onclick="showLearn(this.dataset.id)" data-id="'+item.id+'">'+
+                '<span style="font-size:.72em;color:var(--text3);min-width:20px">'+(ii+1)+'</span>'+
+                '<span>'+item.title+'</span>'+
+                '<span style="margin-left:auto">'+(completed[item.id]?'✅':'')+'</span></div>';
+        });
+        html += '</div></div>';
+    });
+    document.getElementById('learnSidebar').innerHTML = html;
+    toggleLcat(0);
+}
+
+function toggleLcat(ci) {
+    var el = document.getElementById('lcatItems'+ci);
+    var title = document.getElementById('lcat'+ci);
+    if(el){ el.classList.toggle('show'); title.classList.toggle('open'); }
+}
+
+function showLearn(id) {
+    currentLearnId = id;
+    document.querySelectorAll('.learn-item').forEach(function(e){e.classList.remove('active');});
+    var li = document.getElementById('li-'+id);
+    if(li) li.classList.add('active');
+    var item=null, catName='';
+    learnCurriculum.forEach(function(cat){cat.items.forEach(function(i){if(i.id===id){item=i;catName=cat.cat;}});});
+    if(!item) return;
+    var completed={};
+    try{completed=JSON.parse(localStorage.getItem('learnDone')||'{}');}catch(e){}
+    completed[id]=true;
+    try{localStorage.setItem('learnDone',JSON.stringify(completed));}catch(e){}
+    var allIds=[];
+    learnCurriculum.forEach(function(cat){cat.items.forEach(function(i){allIds.push(i.id);});});
+    var idx=allIds.indexOf(id);
+    var prev=idx>0?allIds[idx-1]:null;
+    var next=idx<allIds.length-1?allIds[idx+1]:null;
+    var ytHtml='';
+    if(item.yt&&item.yt.length){
+        ytHtml='<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)"><div style="font-size:.75em;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📺 추천 유튜브</div>';
+        item.yt.forEach(function(y){
+            ytHtml+='<a class="yt-item" href="'+y.url+'" target="_blank"><span style="font-size:1.2em">▶️</span><span><span class="yt-name">'+y.name+'</span><span class="yt-ch">'+y.ch+'</span></span></a>';
+        });
+        ytHtml+='</div>';
+    }
+    document.getElementById('learnContent').innerHTML =
+        '<div style="margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">'+
+        '<div style="font-size:.72em;color:var(--accent2);font-weight:700;margin-bottom:4px">'+catName+'</div>'+
+        '<div style="font-size:1.3em;font-weight:700;color:var(--text);margin-bottom:8px">'+item.title+'</div>'+
+        '<div style="font-size:.85em;color:var(--text2)">'+item.desc+'</div></div>'+
+        '<div class="learn-body">'+item.body+'</div>'+ytHtml+
+        '<div style="display:flex;gap:8px;align-items:center;padding:12px 0;border-top:1px solid var(--border);margin-top:16px">'+
+        '<button class="tts-btn" id="ttsPlayBtn" onclick="toggleTTS()">🔊 음성으로 듣기</button>'+
+        '<button class="tts-btn dl" onclick="downloadTTS()">💾 스크립트 저장</button>'+
+        '<div style="flex:1;height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div id="ttsBar" style="height:100%;background:var(--accent);width:0%;transition:width .3s"></div></div>'+
+        '<span style="font-size:.75em;color:var(--text3)" id="ttsStatus"></span></div>'+
+        '<div style="display:flex;justify-content:space-between;margin-top:12px">'+
+        (prev?'<button class="learn-nav-btn" onclick="showLearn(this.dataset.id)" data-id="'+prev+'">← 이전</button>':'<span></span>')+
+        (next?'<button class="learn-nav-btn" onclick="showLearn(this.dataset.id)" data-id="'+next+'">다음 →</button>':'<span></span>')+
+        '</div>';
+    initLearn();
+}
+
+function getTTSText(id){
+    var item=null;
+    learnCurriculum.forEach(function(cat){cat.items.forEach(function(i){if(i.id===id){item=i;}});});
+    if(!item) return '';
+    var d=document.createElement('div');
+    d.innerHTML=item.title+'. '+item.desc+'. '+item.body;
+    return d.textContent||d.innerText||'';
+}
+
+function toggleTTS(){
+    if(ttsPlaying){
+        window.speechSynthesis.cancel();
+        ttsPlaying=false;
+        var btn=document.getElementById('ttsPlayBtn');
+        if(btn){btn.textContent='🔊 음성으로 듣기';btn.classList.remove('stop');}
+        return;
+    }
+    var text=getTTSText(currentLearnId);
+    if(!text) return;
+    var u=new SpeechSynthesisUtterance(text);
+    u.lang='ko-KR'; u.rate=0.9;
+    ttsPlaying=true;
+    var btn=document.getElementById('ttsPlayBtn');
+    if(btn){btn.textContent='⏹ 정지';btn.classList.add('stop');}
+    document.getElementById('ttsStatus').textContent='재생 중...';
+    var t0=Date.now(), est=text.length*100;
+    var prog=setInterval(function(){
+        if(!ttsPlaying){clearInterval(prog);return;}
+        var bar=document.getElementById('ttsBar');
+        if(bar) bar.style.width=Math.min((Date.now()-t0)/est*100,95)+'%';
+    },300);
+    u.onend=function(){
+        ttsPlaying=false; clearInterval(prog);
+        var btn=document.getElementById('ttsPlayBtn');
+        if(btn){btn.textContent='🔊 음성으로 듣기';btn.classList.remove('stop');}
+        var bar=document.getElementById('ttsBar');
+        if(bar) bar.style.width='100%';
+        document.getElementById('ttsStatus').textContent='완료';
+    };
+    window.speechSynthesis.speak(u);
+}
+
+function downloadTTS(){
+    var text=getTTSText(currentLearnId);
+    if(!text){alert('먼저 학습 항목을 선택하세요');return;}
+    var blob=new Blob([text],{type:'text/plain;charset=utf-8'});
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=(currentLearnId||'script')+'.txt';
+    a.click();
+}
+
+function syncSearch(val) {
+    var main = document.getElementById('stockCode');
+    if(main) main.value = val;
+    // 자동완성도 연동
+    if(typeof showSuggestions === 'function') showSuggestions(val);
+}
+function syncAndSearch() {
+    var w = document.getElementById('stockCodeW');
+    var main = document.getElementById('stockCode');
+    if(w && main) main.value = w.value;
     doSearch();
+}
+function handleWelcomeKey(e) {
+    if(e.key === 'Enter') syncAndSearch();
+}
+
+window.onload=function(){
+    setTimeout(function(){
+        doSearch('005930');
+    }, 100);
     startAlertTimer();
     loadMarket();
     startAutoTimer();

@@ -1,12 +1,23 @@
 from flask import Flask, jsonify, render_template, request
 import requests as req
 import sys, os
+import re
 sys.path.insert(0, os.path.expanduser("~/trading"))
 import config
 import kis_api
 import stock_master
 
 app = Flask(__name__)
+
+@app.route("/favicon.ico")
+def favicon():
+    from flask import send_from_directory
+    return send_from_directory(os.path.join(app.root_path, "static"), "favicon.ico", mimetype="image/vnd.microsoft.icon")
+
+def validate_stock_code(code):
+    if not code or not isinstance(code, str):
+        return False
+    return bool(re.match(r'^\d{6}$', code.strip()))
 stock_master.ensure_updated()
 
 @app.route("/")
@@ -23,6 +34,8 @@ def search_stock(keyword):
 
 @app.route("/api/stock/<stock_code>")
 def get_stock(stock_code):
+    if not validate_stock_code(stock_code):
+        return jsonify({"error": "유효하지 않은 종목코드입니다. 6자리 숫자를 입력하세요."}), 400
     try:
         from datetime import datetime
         token = kis_api.get_access_token()
@@ -83,6 +96,8 @@ def get_stock(stock_code):
 
 @app.route("/api/chart/<stock_code>")
 def get_chart(stock_code):
+    if not validate_stock_code(stock_code):
+        return jsonify({"error": "유효하지 않은 종목코드입니다. 6자리 숫자를 입력하세요."}), 400
     try:
         from datetime import datetime, timedelta
         period = request.args.get("period", "D")
@@ -189,6 +204,8 @@ def get_chart(stock_code):
 
 @app.route("/api/quant/<stock_code>")
 def get_quant(stock_code):
+    if not validate_stock_code(stock_code):
+        return jsonify({"error": "유효하지 않은 종목코드입니다. 6자리 숫자를 입력하세요."}), 400
     try:
         from datetime import datetime, timedelta
         token = kis_api.get_access_token()
