@@ -1,0 +1,37 @@
+{
+  "presets": [
+    {
+      "is_paper": true,
+      "risk_tolerance": 0.003,
+      "take_profit": 0.002,
+      "short_ma": null,
+      "long_ma": null,
+      "trading_interval": null,
+      "order_quantity": 3,
+      "id": 1773407137522,
+      "created_at": "2026-03-13 22:05"
+    },
+    {
+      "is_paper": true,
+      "risk_tolerance": 0.001,
+      "take_profit": null,
+      "short_ma": null,
+      "long_ma": 2,
+      "trading_interval": null,
+      "order_quantity": null,
+      "id": 1773407381244,
+      "created_at": "2026-03-13 22:09"
+    },
+    {
+      "is_paper": true,
+      "risk_tolerance": null,
+      "take_profit": null,
+      "short_ma": 2,
+      "long_ma": null,
+      "trading_interval": 240,
+      "order_quantity": null,
+      "id": 1773407574056,
+      "created_at": "2026-03-13 22:12"
+    }
+  ]
+}

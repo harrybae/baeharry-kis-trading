@@ -1,0 +1,30 @@
+{
+  "trades": [
+    {
+      "date": "2026-03-13",
+      "code": "005930",
+      "name": "삼성전자",
+      "type": "BUY",
+      "qty": 10,
+      "price": 184000,
+      "amount": 1840000,
+      "fee": 276,
+      "source": "manual",
+      "id": "642ae3da",
+      "pnl": 0
+    },
+    {
+      "date": "2026-03-13",
+      "code": "279570",
+      "name": "케이뱅크",
+      "type": "BUY",
+      "qty": 150,
+      "price": 7100,
+      "amount": 1065000,
+      "fee": 159,
+      "source": "manual",
+      "id": "687ea623",
+      "pnl": 0
+    }
+  ]
+}

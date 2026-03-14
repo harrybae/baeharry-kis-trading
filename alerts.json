@@ -1,1 +1,1 @@
-{"alerts": [{"id": 1773026060216, "code": "001500", "type": "target", "value": 10580, "active": true}]}
+{"alerts": [{"active": false, "code": "001500", "id": 1773026060216, "name": "현대차증권", "type": "target", "value": 10580}, {"active": true, "code": "279570", "id": 1773401204456, "name": "케이뱅크", "type": "target", "value": 7050}]}

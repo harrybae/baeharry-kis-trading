@@ -283,7 +283,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history.append({"role": "user", "content": user_message})
     try:
         response = ollama.chat(
-            model="qwen3:4b",
+            model="deepseek-coder-v2:latest",
             messages=[
                 {"role": "system", "content": "당신은 한국어로 대화하는 친절한 AI 어시스턴트입니다. 주식 자동매매 시스템과 연동되어 있으며 투자 관련 질문에도 답변할 수 있습니다."}
             ] + conversation_history
@@ -297,6 +297,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ AI 응답 오류: {e}")
 
 # ── 메인 실행 ─────────────────────────────────────────────────────
+
+# ── 자동매매 신호 알림 ─────────────────────────────────────────────────────
+
+def send_telegram_message(message):
+    """텔레그램으로 메시지 전송 (비동기 없이 동기 방식으로)"""
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": CHAT_ID,
+            "text": message,
+            "parse_mode": "Markdown"
+        }
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print(f"✅ 텔레그램 메시지 전송 성공: {message[:50]}...")
+            return True
+        else:
+            print(f"❌ 텔레그램 전송 실패: {response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ 텔레그램 전송 오류: {e}")
+        return False
 
 def run_bot():
     app = Application.builder().token(TELEGRAM_TOKEN).build()

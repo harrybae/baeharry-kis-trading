@@ -2,10 +2,12 @@ from flask import Flask, jsonify, render_template, request, make_response
 import requests as req
 import sys, os
 import re
+import json
 sys.path.insert(0, os.path.expanduser("~/trading"))
 import config
 import kis_api
 import stock_master
+from position_manager import PositionManager
 
 app = Flask(__name__)
 _balance_cache = {"holdings": {}, "deposit": 0}
@@ -35,6 +37,9 @@ def search_stock(keyword):
         results = stock_master.search_stocks(keyword, limit=8)
         return jsonify(results)
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/stock/<stock_code>")
@@ -103,6 +108,9 @@ def get_stock(stock_code):
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         })
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/chart/<stock_code>")
@@ -210,6 +218,9 @@ def get_chart(stock_code):
 
         return jsonify(chart)
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
@@ -330,6 +341,9 @@ def get_quant(stock_code):
             "annual_vol": annual_vol, "mdd": mdd, "sharpe": sharpe,
         })
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/watchlist", methods=["GET"])
@@ -342,6 +356,9 @@ def get_watchlist():
                 return jsonify(js.load(f))
         return jsonify({"stocks": []})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/watchlist", methods=["POST"])
@@ -350,8 +367,42 @@ def save_watchlist():
         import json as js
         data = request.get_json()
         wf = os.path.expanduser("~/trading/watchlist.json")
+        # 기존 목록 로드
+        if os.path.exists(wf):
+            with open(wf) as f:
+                existing = js.load(f)
+            if isinstance(existing, dict) and "stocks" in existing:
+                stocks = existing["stocks"]
+            elif isinstance(existing, list):
+                stocks = existing
+            else:
+                stocks = []
+        else:
+            stocks = []
+        # 중복 체크 후 추가
+        code = data.get("code","")
+        if not any((s.get("code") if isinstance(s,dict) else s) == code for s in stocks):
+            stocks.append({"code": code, "name": data.get("name", code)})
         with open(wf, 'w') as f:
-            js.dump(data, f)
+            js.dump({"stocks": stocks}, f, ensure_ascii=False, indent=2)
+        return jsonify({"ok": True})
+    except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/watchlist/<code>", methods=["DELETE"])
+def delete_watchlist(code):
+    try:
+        import json as js
+        wf = os.path.expanduser("~/trading/watchlist.json")
+        with open(wf) as f:
+            data = js.load(f)
+        stocks = data.get("stocks", []) if isinstance(data, dict) else data
+        stocks = [s for s in stocks if (s.get("code") if isinstance(s, dict) else s) != code]
+        with open(wf, 'w') as f:
+            js.dump({"stocks": stocks}, f, ensure_ascii=False, indent=2)
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -368,7 +419,8 @@ def get_watchlist_prices():
             stocks = js.load(f).get("stocks", [])
         token = kis_api.get_access_token()
         results = []
-        for code in stocks:
+        for stock in stocks:
+            code = stock["code"] if isinstance(stock, dict) else stock
             try:
                 headers = {
                     "Authorization": f"Bearer {token}",
@@ -402,6 +454,9 @@ def get_watchlist_prices():
                 results.append({"code": code, "name": code, "error": str(e)})
         return jsonify(results)
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/alerts", methods=["GET"])
@@ -414,6 +469,9 @@ def get_alerts():
                 return jsonify(js.load(f))
         return jsonify({"alerts": []})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/alerts", methods=["POST"])
@@ -426,6 +484,9 @@ def save_alerts():
             js.dump(data, f, ensure_ascii=False)
         return jsonify({"ok": True})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/alerts/check")
@@ -502,6 +563,9 @@ def check_alerts():
                     pass
         return jsonify({"triggered": triggered, "checked_at": datetime.now().strftime("%H:%M:%S")})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
@@ -670,6 +734,9 @@ def get_market():
         result["updated"] = datetime.now().strftime("%H:%M")
         return jsonify(result)
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
@@ -769,6 +836,9 @@ def run_screener():
 
         return jsonify({"results": results, "checked": checked, "total": len(stocks)})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
@@ -853,6 +923,169 @@ def delete_trade(tid):
     save_trades_data(data)
     return jsonify({"ok": True})
 
+
+@app.route("/api/positions", methods=["GET"])
+def get_positions():
+    """포지션 조회 API"""
+    pm = PositionManager()
+    summary = pm.get_summary()
+    positions = pm.get_all_positions()
+    
+    return jsonify({
+        "summary": summary,
+        "positions": positions
+    })
+
+
+
+@app.route("/api/auto-presets", methods=["GET"])
+def get_auto_presets():
+    try:
+        pf = os.path.expanduser("~/trading/auto_presets.json")
+        if not os.path.exists(pf):
+            return jsonify({"presets": []})
+        with open(pf) as f:
+            return jsonify(json.load(f))
+    except Exception as e:
+        return jsonify({"presets": []})
+
+@app.route("/api/auto-presets", methods=["POST"])
+def save_auto_preset():
+    try:
+        pf = os.path.expanduser("~/trading/auto_presets.json")
+        data = request.json
+        presets = []
+        if os.path.exists(pf):
+            with open(pf) as f:
+                presets = json.load(f).get("presets", [])
+        import time
+        data["id"] = int(time.time() * 1000)
+        data["created_at"] = __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M")
+        presets.append(data)
+        with open(pf, "w") as f:
+            json.dump({"presets": presets}, f, ensure_ascii=False, indent=2)
+        return jsonify({"ok": True, "id": data["id"]})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/auto-presets/<int:pid>", methods=["DELETE"])
+def delete_auto_preset(pid):
+    try:
+        pf = os.path.expanduser("~/trading/auto_presets.json")
+        if not os.path.exists(pf):
+            return jsonify({"ok": True})
+        with open(pf) as f:
+            data = json.load(f)
+        data["presets"] = [p for p in data["presets"] if p["id"] != pid]
+        with open(pf, "w") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/daemon/start", methods=["POST"])
+def start_daemon():
+    try:
+        import subprocess
+        daemon_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "auto_trading_with_risk_daemon.py")
+        proc = subprocess.Popen(["python3", daemon_path], 
+            stdout=open('auto_trading_risk_daemon.log', 'a'),
+            stderr=subprocess.STDOUT)
+        return jsonify({"ok": True, "pid": proc.pid})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/daemon/stop", methods=["POST"])
+def stop_daemon():
+    try:
+        import subprocess
+        result = subprocess.run(["pkill", "-f", "auto_trading_with_risk_daemon.py"], capture_output=True)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/auto-config", methods=["GET"])
+def get_auto_config():
+    return jsonify({
+        "is_paper": config.IS_PAPER_TRADING,
+        "risk_tolerance": config.RISK_TOLERANCE,
+        "take_profit": config.TAKE_PROFIT,
+        "short_ma": config.SHORT_MA,
+        "long_ma": config.LONG_MA,
+        "trading_interval": config.TRADING_INTERVAL,
+        "order_quantity": config.ORDER_QUANTITY,
+    })
+
+@app.route("/api/auto-config", methods=["POST"])
+def save_auto_config():
+    try:
+        data = request.json
+        cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.py")
+        with open(cfg_path) as f:
+            lines = f.readlines()
+        
+        def safe(val, default):
+            return val if val is not None else default
+        mapping = {
+            "IS_PAPER_TRADING": str(safe(data.get("is_paper"), config.IS_PAPER_TRADING)),
+            "RISK_TOLERANCE": str(safe(data.get("risk_tolerance"), config.RISK_TOLERANCE)),
+            "TAKE_PROFIT": str(safe(data.get("take_profit"), config.TAKE_PROFIT)),
+            "SHORT_MA": str(safe(data.get("short_ma"), config.SHORT_MA)),
+            "LONG_MA": str(safe(data.get("long_ma"), config.LONG_MA)),
+            "TRADING_INTERVAL": str(safe(data.get("trading_interval"), config.TRADING_INTERVAL)),
+            "ORDER_QUANTITY": str(safe(data.get("order_quantity"), config.ORDER_QUANTITY)),
+        }
+        
+        new_lines = []
+        for line in lines:
+            replaced = False
+            for key, val in mapping.items():
+                if line.startswith(key + " ="):
+                    new_lines.append(f"{key} = {val}\n")
+                    replaced = True
+                    break
+            if not replaced:
+                new_lines.append(line)
+        
+        with open(cfg_path, "w") as f:
+            f.writelines(new_lines)
+        
+        # config 모듈 리로드
+        import importlib
+        importlib.reload(config)
+        
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/auto-status", methods=["GET"])
+def get_auto_status():
+    """자동매매 상태 조회 API"""
+    import subprocess
+    
+    # 데몬 프로세스 확인
+    try:
+        result = subprocess.run(
+            ['pgrep', '-f', 'auto_trading_with_risk_daemon.py'],
+            capture_output=True,
+            text=True
+        )
+        is_running = result.returncode == 0
+        pid = result.stdout.strip().split()[0] if result.stdout else None
+    except:
+        is_running = False
+        pid = None
+    
+    return jsonify({
+        "daemon_running": is_running,
+        "daemon_pid": pid,
+        "mode": "모의투자" if config.IS_PAPER_TRADING else "실전투자",
+        "stocks_monitoring": 5,
+        "risk_tolerance": f"{(config.RISK_TOLERANCE or 0) * 100}%",
+        "take_profit": f"{(config.TAKE_PROFIT or 0) * 100}%"
+    })
+
 @app.route("/api/trades/fetch", methods=["GET"])
 def fetch_trades():
     try:
@@ -916,9 +1149,12 @@ def fetch_trades():
         save_trades_data(data)
         return jsonify({"ok": True, "added": added})
     except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
     print("✅ 웹 대시보드 시작: http://localhost:8080")
-    app.run(host="0.0.0.0", port=8080, debug=False)
+    app.run(host="0.0.0.0", port=8081, debug=True)

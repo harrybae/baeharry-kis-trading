@@ -13,6 +13,7 @@ import config
 import kis_api
 import strategy
 import requests
+import telegram_bot
 
 # 로깅 설정
 logging.basicConfig(
@@ -135,13 +136,31 @@ class TradingBot:
 
             # 매수 신호
             if signal == "BUY" and qty == 0:
+                ma_short = strategy.calc_ma(prices, config.SHORT_MA)
+                ma_long = strategy.calc_ma(prices, config.LONG_MA)
+                msg = f"📈 [{config.STOCK_NAME}] BUY 신호 감지!\n"                       f"현재가: {current_price:,}원\n"                       f"MA{config.SHORT_MA}: {ma_short:,.0f}원\n"                       f"MA{config.LONG_MA}: {ma_long:,.0f}원\n"                       f"신호: 골든크로스 (단기 > 장기)"
                 print("📈 매수 신호 - 골든크로스")
-                self.place_order(stock_code, config.ORDER_QUANTITY, "BUY")
+                print(msg)
+                try:
+                    telegram_bot.send_telegram_message(msg)
+                except Exception as e:
+                    print(f"텔레그램 전송 실패: {e}")
+                logging.info(f"BUY 신호 감지 - {msg}")
+                # self.place_order(stock_code, config.ORDER_QUANTITY, "BUY")
             
             # 매도 신호
             elif signal == "SELL" and qty > 0:
+                ma_short = strategy.calc_ma(prices, config.SHORT_MA)
+                ma_long = strategy.calc_ma(prices, config.LONG_MA)
+                msg = f"📉 [{config.STOCK_NAME}] SELL 신호 감지!\n"                       f"현재가: {current_price:,}원\n"                       f"MA{config.SHORT_MA}: {ma_short:,.0f}원\n"                       f"MA{config.LONG_MA}: {ma_long:,.0f}원\n"                       f"신호: 데드크로스 (단기 < 장기)"
                 print("📉 매도 신호 - 데드크로스")
-                self.place_order(stock_code, qty, "SELL")
+                print(msg)
+                try:
+                    telegram_bot.send_telegram_message(msg)
+                except Exception as e:
+                    print(f"텔레그램 전송 실패: {e}")
+                logging.info(f"SELL 신호 감지 - {msg}")
+                # self.place_order(stock_code, qty, "SELL")
             
             else:
                 print("📌 관망 중...")

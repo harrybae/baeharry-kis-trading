@@ -331,12 +331,7 @@
     </div><!-- dash-wrap -->
     <div class="watch-wrap" id="watch-wrap">
         <div class="watch-toolbar">
-            <div style="position:relative;display:flex;align-items:center;">
-                <input type="text" id="watchInput" placeholder="종목명 또는 코드" autocomplete="off"
-                    oninput="watchSuggest(this.value)" onkeydown="watchKeyDown(event)"
-                    style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:.85em;width:180px;outline:none;">
-                <div id="sgboxWatch" style="position:absolute;top:calc(100% + 2px);left:0;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:500;display:none;overflow:hidden;"></div>
-            </div>
+            <input type="text" class="watch-add-input" id="watchInput" placeholder="종목코드 입력" maxlength="6">
             <button class="watch-add-btn" onclick="addWatchStock()">+ 추가</button>
             <button class="watch-refresh-btn" onclick="loadWatchPrices(true)">🔄 새로고침</button>
             <span class="watch-status">다음 갱신: <span class="watch-countdown" id="watchCountdown">30</span>초</span>
@@ -365,11 +360,8 @@
                 <span id="alertCheckedAt" style="font-size:.75em;color:var(--text3);margin-left:4px"></span>
                 <span style="margin-left:auto;font-size:.75em;color:var(--text3)">다음체크: <span id="alertCountdown" style="color:var(--accent2);font-family:JetBrains Mono,monospace">30:00</span></span>
             </div>
-            <div class="alert-form" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                <div style="position:relative;display:flex;gap:0;">
-                    <input type="text" id="alertCode" placeholder="종목명 또는 코드" maxlength="20" autocomplete="off" oninput="alertSearchSuggest(this.value)" onkeydown="alertKeyDown(event)" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:.85em;width:180px;outline:none;">
-                    <div id="sgboxAlert" style="position:absolute;top:calc(100% + 2px);left:0;width:280px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:500;display:none;overflow:hidden;"></div>
-                </div>
+            <div class="alert-form">
+                <input type="text" class="alert-input" id="alertCode" placeholder="종목코드" maxlength="6" style="width:90px">
                 <select class="alert-select" id="alertType">
                     <option value="target">🎯 목표가 이상</option>
                     <option value="stop">🛑 손절가 이하</option>
@@ -382,90 +374,16 @@
             </div>
             <div style="overflow-x:auto">
             <table class="alert-table">
-                <thead><tr><th>종목코드</th><th>종목명</th><th>조건</th><th>값</th><th>상태</th><th></th></tr></thead>
+                <thead><tr><th>종목</th><th>조건</th><th>값</th><th>상태</th><th></th></tr></thead>
                 <tbody id="alertBody"><tr><td colspan="5" style="color:var(--text3);padding:20px;text-align:center">알림을 추가해주세요</td></tr></tbody>
             </table>
             </div>
         </div>
     </div>
     <div class="auto-wrap" id="auto-wrap">
-
-        <!-- 자동매매 설정 -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                <div style="font-size:1em;font-weight:700;color:var(--accent2)">⚙️ 자동매매 설정</div>
-                <button onclick="saveAutoConfig()" style="background:var(--accent);border:none;border-radius:7px;color:#fff;padding:7px 16px;font-size:.82em;font-weight:700;cursor:pointer;">💾 저장</button>
-            </div>
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">거래 모드</div>
-                    <select id="cfgPaper" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                        <option value="true">🟡 모의투자</option>
-                        <option value="false">🔴 실전투자</option>
-                    </select>
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">손절 비율 (%)</div>
-                    <input type="number" id="cfgRisk" step="0.1" min="0.1" max="10" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">익절 비율 (%)</div>
-                    <input type="number" id="cfgProfit" step="0.1" min="0.1" max="20" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">단기 이동평균</div>
-                    <input type="number" id="cfgShortMA" min="1" max="60" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">장기 이동평균</div>
-                    <input type="number" id="cfgLongMA" min="1" max="200" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">매매 간격 (초)</div>
-                    <input type="number" id="cfgInterval" min="60" max="3600" step="60" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
-                    <div style="font-size:.75em;color:var(--text3);margin-bottom:6px">1회 주문 수량</div>
-                    <input type="number" id="cfgQty" min="1" style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:.85em;width:100%">
-                </div>
-            </div>
-        </div>
-
-        <!-- 자동매매 설정 프리셋 리스트 -->
-        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
-            <div style="font-size:1em;font-weight:700;color:var(--accent2);margin-bottom:12px">📋 저장된 설정 프리셋</div>
-            <div style="overflow-x:auto">
-                <table style="width:100%;border-collapse:collapse;font-size:.82em">
-                    <thead>
-                        <tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
-                            <th style="padding:8px;text-align:left;color:var(--text2)">저장일시</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">모드</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">손절</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">익절</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">단기MA</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">장기MA</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">간격(초)</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">수량</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">적용</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">삭제</th>
-                        </tr>
-                    </thead>
-                    <tbody id="presetBody">
-                        <tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3)">저장된 프리셋이 없습니다</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
         <!-- 자동매매 상태 -->
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-                <div style="font-size:1em;font-weight:700;color:var(--accent2)">🤖 자동매매 상태</div>
-                <div style="display:flex;gap:8px;">
-                    <button onclick="startDaemon()" style="background:#10b981;border:none;border-radius:7px;color:#fff;padding:7px 16px;font-size:.82em;font-weight:700;cursor:pointer;">▶ 시작</button>
-                    <button onclick="stopDaemon()" style="background:var(--up);border:none;border-radius:7px;color:#fff;padding:7px 16px;font-size:.82em;font-weight:700;cursor:pointer;">■ 중지</button>
-                    <button onclick="loadAutoConditions()" style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text2);padding:7px 16px;font-size:.82em;cursor:pointer;">🔄 새로고침</button>
-                </div>
-            </div>
+            <div style="font-size:1em;font-weight:700;color:var(--accent2);margin-bottom:12px">🤖 자동매매 상태</div>
             
             <div id="autoStatusContainer" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
                 <div style="background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:12px">
@@ -523,11 +441,6 @@
                     </tbody>
                 </table>
             </div>
-        </div>
-
-        <!-- 자동매매 조건 -->
-        <div style="display:none">
-            <tbody id="autoBody"></tbody>
         </div>
     </div>
     <div class="trade-wrap" id="trade-wrap" style="display:none">
@@ -691,7 +604,6 @@
                             <th style="padding:8px;text-align:right;color:var(--text2)">단가</th>
                             <th style="padding:8px;text-align:right;color:var(--text2)">금액</th>
                             <th style="padding:8px;text-align:right;color:var(--text2)">수수료</th>
-                            <th style="padding:8px;text-align:center;color:var(--text2)">적용</th>
                             <th style="padding:8px;text-align:center;color:var(--text2)">삭제</th>
                         </tr>
                     </thead>
@@ -732,7 +644,7 @@ function rebindSearch(){
     var newSb=sb.cloneNode(true); sb.parentNode.replaceChild(newSb,sb); sb=newSb;
     inp.addEventListener('compositionstart',function(){comp=true;});
     inp.addEventListener('compositionend',function(){comp=false;var v=inp.value.trim();if(v)schedSug(v);});
-    inp.addEventListener('input',function(){var v=inp.value.trim();sidx=-1;if(!v){hideSug();return;}clearTimeout(timer);fetch('/api/search/'+encodeURIComponent(v)).then(function(r){return r.json();}).then(showSug).catch(function(){});});
+    inp.addEventListener('input',function(){if(comp)return;var v=inp.value.trim();sidx=-1;if(!v||/^\d+$/.test(v)){hideSug();return;}schedSug(v);});
     inp.addEventListener('keydown',function(e){
         if(e.key==='ArrowDown'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.min(sidx+1,sitems.length-1);updA();}
         else if(e.key==='ArrowUp'){e.preventDefault();if(!isOpen||!sitems.length)return;sidx=Math.max(sidx-1,-1);updA();}
@@ -1038,10 +950,10 @@ function renderCandle(canvas,data){
 var quantStocks = ['005930','000660','035420'];
 
 function switchTab(tab) {
-    ['tabDash','tabQuant','tabWatch','tabTrade','tabAuto','tabManual','tabLearn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
+    ['tabDash','tabQuant','tabWatch','tabTrade','tabAuto','tabLearn'].forEach(function(id){ var el=document.getElementById(id); if(el) el.classList.remove('active'); });
     var el = document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el) el.classList.add('active');
-    ['dash-wrap','quant-wrap','watch-wrap','trade-wrap','auto-wrap','manual-wrap','learn-wrap'].forEach(function(id){
+    ['dash-wrap','quant-wrap','watch-wrap','trade-wrap','auto-wrap','learn-wrap'].forEach(function(id){
         var el = document.getElementById(id);
         if(el) el.style.display = 'none';
     });
@@ -1050,8 +962,7 @@ function switchTab(tab) {
     if(tab==='quant') renderQuantTags();
     if(tab==='watch') { loadWatchlist(); loadAlerts(); }
     if(tab==='trade') { loadTrades(); loadPortfolio(); }
-    if(tab==='auto') { loadAutoConditions(); loadAutoConfig(); loadAutoPresets(); loadMonitorStocks(); }
-    if(tab==='manual') { loadManualHistory(); }
+    if(tab==='auto') { loadAutoConditions(); }
     if(tab==='learn') { initLearn(); }
 }
 
@@ -1247,32 +1158,29 @@ function doLoadWatchPrices() {
 }
 
 function addWatchStock() {
-    var inp = document.getElementById('watchInput');
-    var code = inp.dataset.code || inp.value.replace(/\s/g,'').trim();
-    var name = inp.dataset.name || code;
-    if(!code) { alert('종목을 검색해서 선택해주세요.'); return; }
-    fetch('/api/watchlist', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({code: code, name: name})
-    }).then(function(r){return r.json();}).then(function(d){
-        if(d.ok||d.success) {
-            inp.value=''; inp.dataset.code=''; inp.dataset.name='';
-            loadWatchPrices(true);
-            loadMonitorStocks();
-        } else {
-            alert(d.error||'추가 실패');
-        }
+    var v = document.getElementById('watchInput').value.replace(/\s/g,'').trim();
+    if(!v || !/^\d{5,6}$/.test(v)) { alert('6자리 종목코드를 입력하세요'); return; }
+    fetch('/api/watchlist').then(function(r){return r.json();}).then(function(d){
+        var stocks = d.stocks || [];
+        if(stocks.indexOf(v) >= 0) { alert('이미 추가된 종목입니다'); return; }
+        if(stocks.length >= 20) { alert('최대 20개까지 추가 가능합니다'); return; }
+        stocks.push(v);
+        fetch('/api/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stocks:stocks})})
+            .then(function(){ document.getElementById('watchInput').value=''; loadWatchPrices(true); });
     });
 }
 
 function removeWatchStock(code) {
-    fetch('/api/watchlist/' + code, {method:'DELETE'})
-        .then(function(r){return r.json();})
-        .then(function(){ loadWatchPrices(true); loadMonitorStocks(); });
+    fetch('/api/watchlist').then(function(r){return r.json();}).then(function(d){
+        var stocks = (d.stocks||[]).filter(function(c){return c!==code;});
+        fetch('/api/watchlist', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({stocks:stocks})})
+            .then(function(){ loadWatchPrices(true); });
+    });
 }
 
-// watchInput keydown handled by watchKeyDown
+document.getElementById('watchInput').addEventListener('keydown', function(e){
+    if(e.key==='Enter') addWatchStock();
+});
 
 function sortWatch(key) {
     if(watchSortKey===key) watchSortAsc=!watchSortAsc;
@@ -1316,7 +1224,7 @@ function renderWatchTable() {
             '<td class="'+fnbClass+'">'+fnbSign+fnb.toLocaleString()+'</td>'+
             '<td>'+w52html+'</td>'+
             '<td style="color:var(--text3);font-size:.75em">'+d.timestamp+'</td>'+
-            '<td style="text-align:center"><button onclick="event.stopPropagation();removeWatchStock(\''+d.code+'\')" style="background:none;border:1px solid var(--up);border-radius:5px;color:var(--up);padding:3px 10px;font-size:.78em;cursor:pointer;">삭제</button></td>'+
+            '<td><button class="del-btn" onclick="event.stopPropagation();removeWatchStock(\''+d.code+'\')">✕</button></td>'+
         '</tr>';
     });
     document.getElementById('watchBody').innerHTML = html || '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:40px">관심종목을 추가해주세요</td></tr>';
@@ -1347,17 +1255,14 @@ function loadAlerts() {
 }
 
 function addAlert() {
-    var inp = document.getElementById('alertCode');
-    var code = inp.dataset.code || inp.value.trim();
+    var code = document.getElementById('alertCode').value.trim();
     var type = document.getElementById('alertType').value;
     var value = parseFloat(document.getElementById('alertValue').value);
-    if(!code) { alert('종목을 검색해서 선택해주세요'); return; }
-    if(!/^\d{5,6}$/.test(code)) { alert('종목을 목록에서 선택해주세요'); return; }
+    if(!code || !/^\d{5,6}$/.test(code)) { alert('종목코드를 입력하세요'); return; }
     if(isNaN(value) || value <= 0) { alert('값을 입력하세요'); return; }
-    var name = document.getElementById('alertCode').dataset.name || code;
-    alertData.push({id: Date.now(), code: code, name: name, type: type, value: value, active: true});
+    alertData.push({id: Date.now(), code: code, type: type, value: value, active: true});
     saveAlerts();
-    var alertInp = document.getElementById('alertCode'); alertInp.value = ''; alertInp.dataset.code=''; alertInp.dataset.name='';
+    document.getElementById('alertCode').value = '';
     document.getElementById('alertValue').value = '';
 }
 
@@ -1378,7 +1283,7 @@ function saveAlerts() {
 
 function renderAlertTable() {
     if(!alertData.length) {
-        document.getElementById('alertBody').innerHTML = '<tr><td colspan="6" style="color:var(--text3);padding:20px;text-align:center">알림을 추가해주세요</td></tr>';
+        document.getElementById('alertBody').innerHTML = '<tr><td colspan="5" style="color:var(--text3);padding:20px;text-align:center">알림을 추가해주세요</td></tr>';
         return;
     }
     var html = '';
@@ -1387,7 +1292,7 @@ function renderAlertTable() {
         var status = a.active ? '활성' : '비활성';
         var valStr = (a.type==='pct_up'||a.type==='pct_dn') ? a.value+'%' : a.type==='volume' ? a.value+'배' : parseInt(a.value).toLocaleString()+'원';
         html += '<tr>'+
-            '<td class="left">'+a.code+'</td>'+'<td class="left">'+(a.name||'-')+'</td>'+
+            '<td class="left">'+a.code+'</td>'+
             '<td class="left">'+alertTypeNames[a.type]+'</td>'+
             '<td>'+valStr+'</td>'+
             '<td class="left">'+dot+status+'</td>'+
@@ -1823,21 +1728,13 @@ var autoTypeNames = {
 };
 
 function loadAutoConditions() {
+    // NOTE: /api/autoconditions endpoint not implemented yet
     autoConditions = [];
     renderAutoTable();
-    fetch('/api/auto-status').then(function(r){return r.json();}).then(function(d){
-        var el = document.getElementById('daemonStatus');
-        if(el) el.innerHTML = d.daemon_running ? '🟢 실행 중' : '🔴 중지됨';
-        var mode = document.getElementById('tradingMode');
-        if(mode) mode.textContent = d.mode || '-';
-        var stocks = document.getElementById('stocksMonitoring');
-        if(stocks) stocks.textContent = (d.stocks_monitoring || 0) + '개';
-        var risk = document.getElementById('riskSettings');
-        if(risk) risk.textContent = '손절: ' + (d.risk_tolerance || '-') + ' / 익절: ' + (d.take_profit || '-');
-    }).catch(function(){
-        var el = document.getElementById('daemonStatus');
-        if(el) el.innerHTML = '❓ 상태 확인 실패';
-    });
+    // fetch('/api/autoconditions').then(function(r){return r.json();}).then(function(d){
+    //     autoConditions = d.conditions || [];
+    //     renderAutoTable();
+    // });
 }
 
 function addAutoCondition() {
@@ -2183,6 +2080,12 @@ window.onload=function(){
     loadMarket();
     startAutoTimer();
 };
+</script>
+
+</body>
+</html>
+
+
 // ===== 💹 수동거래 =====
 var manualTrades = [];
 
@@ -2263,7 +2166,7 @@ function renderManualTrades() {
         html += '<td style="padding:8px;text-align:right">₩' + t.price.toLocaleString() + '</td>';
         html += '<td style="padding:8px;text-align:right">₩' + t.amount.toLocaleString() + '</td>';
         html += '<td style="padding:8px;text-align:right">₩' + t.fee.toLocaleString() + '</td>';
-        html += '<td style="padding:8px;text-align:center"><button onclick="deleteManualTrade("+t.id+")">❌</button></td>';
+        html += '<td style="padding:8px;text-align:center"><button onclick="deleteManualTrade('' + t.id + '')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:1.1em">❌</button></td>';
         html += '</tr>';
     });
     body.innerHTML = html;
@@ -2380,345 +2283,3 @@ function initAutoTradingDashboard() {
 document.addEventListener('DOMContentLoaded', function() {
     initAutoTradingDashboard();
 });
-
-var alertSidx = -1, alertItems = [], alertIsOpen = false;
-
-function alertSearchSuggest(val) {
-    var box = document.getElementById('sgboxAlert');
-    if(!val || val.length < 1) { box.style.display='none'; alertIsOpen=false; alertItems=[]; alertSidx=-1; return; }
-    fetch('/api/search/'+encodeURIComponent(val)).then(function(r){return r.json();}).then(function(d){
-        var results = Array.isArray(d) ? d : (d.results || []);
-        if(!results.length){ box.style.display='none'; alertIsOpen=false; return; }
-        alertItems = results.slice(0,8);
-        alertSidx = -1;
-        var html = '';
-        alertItems.forEach(function(s, i){
-            var mk = s.market==='KOSPI'?'mk-kospi':'mk-kosdaq';
-            html += '<div class="sgi" data-i="'+i+'" data-code="'+s.code+'" data-name="'+s.name+'">'+
-                '<span class="sgn">'+s.name+'</span>'+
-                '<span class="sgr"><span class="sgc">'+s.code+'</span>'+
-                '<span class="sgm '+mk+'">'+s.market+'</span></span>'+
-                '</div>';
-        });
-        box.innerHTML = html;
-        box.style.display = 'block';
-        alertIsOpen = true;
-        box.querySelectorAll('.sgi').forEach(function(el){
-            el.addEventListener('mouseenter', function(){ alertSidx=parseInt(this.getAttribute('data-i')); alertUpdA(); });
-            el.addEventListener('mousedown', function(e){ e.preventDefault(); selectAlertStock(this.getAttribute('data-code'), this.getAttribute('data-name')); });
-        });
-    });
-}
-
-function alertUpdA() {
-    var box = document.getElementById('sgboxAlert');
-    if(!box) return;
-    box.querySelectorAll('.sgi').forEach(function(el, i){
-        el.classList.toggle('active', i===alertSidx);
-        if(i===alertSidx) el.scrollIntoView({block:'nearest'});
-    });
-}
-
-function handleAlertSelect(el) {
-    var code = el.getAttribute('data-code');
-    var name = el.getAttribute('data-name');
-    selectAlertStock(code, name);
-}
-
-function alertKeyDown(e) {
-    if(e.key==='ArrowDown'){e.preventDefault();if(!alertIsOpen||!alertItems.length)return;alertSidx=Math.min(alertSidx+1,alertItems.length-1);alertUpdA();}
-    else if(e.key==='ArrowUp'){e.preventDefault();if(!alertIsOpen||!alertItems.length)return;alertSidx=Math.max(alertSidx-1,-1);alertUpdA();}
-    else if(e.key==='Enter'){e.preventDefault();if(alertIsOpen&&alertSidx>=0&&alertItems[alertSidx]){var s=alertItems[alertSidx];selectAlertStock(s.code,s.name);}}
-    else if(e.key==='Escape'){document.getElementById('sgboxAlert').style.display='none';alertIsOpen=false;}
-}
-
-function selectAlertStock(code, name) {
-    var input = document.getElementById('alertCode');
-    input.value = name + ' (' + code + ')';
-    input.dataset.name = name;
-    input.dataset.code = code;
-    document.getElementById('sgboxAlert').style.display = 'none';
-}
-
-
-function loadAutoConfig() {
-    fetch('/api/auto-config').then(function(r){return r.json();}).then(function(d){
-        document.getElementById('cfgPaper').value = d.is_paper ? 'true' : 'false';
-        document.getElementById('cfgRisk').value = (d.risk_tolerance * 100).toFixed(1);
-        document.getElementById('cfgProfit').value = (d.take_profit * 100).toFixed(1);
-        document.getElementById('cfgShortMA').value = d.short_ma;
-        document.getElementById('cfgLongMA').value = d.long_ma;
-        document.getElementById('cfgInterval').value = d.trading_interval;
-        document.getElementById('cfgQty').value = d.order_quantity;
-    });
-}
-
-function saveAutoConfig() {
-    var isPaper = document.getElementById('cfgPaper').value === 'true';
-    var risk = parseFloat(document.getElementById('cfgRisk').value) / 100;
-    var profit = parseFloat(document.getElementById('cfgProfit').value) / 100;
-    var shortMA = parseInt(document.getElementById('cfgShortMA').value);
-    var longMA = parseInt(document.getElementById('cfgLongMA').value);
-    var interval = parseInt(document.getElementById('cfgInterval').value);
-    var qty = parseInt(document.getElementById('cfgQty').value);
-
-    if(shortMA >= longMA){ alert('단기 이동평균은 장기보다 작아야 합니다'); return; }
-
-    // 프리셋으로도 저장
-    fetch('/api/auto-presets', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            is_paper: isPaper, risk_tolerance: risk, take_profit: profit,
-            short_ma: shortMA, long_ma: longMA, trading_interval: interval, order_quantity: qty
-        })
-    }).then(function(){loadAutoPresets();});
-
-    fetch('/api/auto-config', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            is_paper: isPaper,
-            risk_tolerance: risk,
-            take_profit: profit,
-            short_ma: shortMA,
-            long_ma: longMA,
-            trading_interval: interval,
-            order_quantity: qty
-        })
-    }).then(function(r){return r.json();}).then(function(d){
-        if(d.ok) alert('설정이 저장됐습니다. 데몬을 재시작해야 적용됩니다.');
-        else alert('저장 실패: ' + (d.error||''));
-    });
-}
-
-
-function loadAutoPresets() {
-    fetch('/api/auto-presets').then(function(r){return r.json();}).then(function(d){
-        var presets = d.presets || [];
-        var body = document.getElementById('presetBody');
-        if(!presets.length){
-            body.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:30px;color:var(--text3)">저장된 프리셋이 없습니다</td></tr>';
-            return;
-        }
-        var html = '';
-        presets.forEach(function(p){
-            html += '<tr style="border-bottom:1px solid var(--border)">' +
-                '<td style="padding:8px;color:var(--text2);font-size:.8em">' + p.created_at + '</td>' +
-                '<td style="padding:8px;text-align:center"><span style="padding:2px 8px;border-radius:4px;font-size:.78em;font-weight:700;background:' + (p.is_paper?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)') + ';color:' + (p.is_paper?'#fbbf24':'var(--up)') + '">' + (p.is_paper?'모의':'실전') + '</span></td>' +
-                '<td style="padding:8px;text-align:center;color:var(--up)">' + (p.risk_tolerance*100).toFixed(1) + '%</td>' +
-                '<td style="padding:8px;text-align:center;color:#10b981">' + (p.take_profit*100).toFixed(1) + '%</td>' +
-                '<td style="padding:8px;text-align:center">' + (p.short_ma||'-') + '</td>' +
-                '<td style="padding:8px;text-align:center">' + (p.long_ma||'-') + '</td>' +
-                '<td style="padding:8px;text-align:center">' + (p.trading_interval||'-') + '</td>' +
-                '<td style="padding:8px;text-align:center">' + (p.order_quantity||'-') + '</td>' +
-                '<td style="padding:8px;text-align:center"><button onclick="applyPreset(' + p.id + ')" style="background:var(--accent);border:none;border-radius:5px;color:#fff;padding:4px 10px;font-size:.78em;cursor:pointer;">적용</button></td>' +
-                '<td style="padding:8px;text-align:center"><button onclick="deletePreset(' + p.id + ')" style="background:none;border:1px solid var(--up);border-radius:5px;color:var(--up);padding:4px 10px;font-size:.78em;cursor:pointer;">삭제</button></td>' +
-            '</tr>';
-        });
-        body.innerHTML = html;
-    });
-}
-
-function deletePreset(id) {
-    if(!confirm('프리셋을 삭제하시겠습니까?')) return;
-    fetch('/api/auto-presets/' + id, {method:'DELETE'}).then(function(r){return r.json();}).then(function(d){
-        if(d.ok) loadAutoPresets();
-    });
-}
-
-function applyPreset(id) {
-    fetch('/api/auto-presets').then(function(r){return r.json();}).then(function(d){
-        var p = (d.presets||[]).find(function(x){return x.id===id;});
-        if(!p) return;
-        document.getElementById('cfgPaper').value = p.is_paper ? 'true' : 'false';
-        document.getElementById('cfgRisk').value = (p.risk_tolerance*100).toFixed(1);
-        document.getElementById('cfgProfit').value = (p.take_profit*100).toFixed(1);
-        document.getElementById('cfgShortMA').value = p.short_ma;
-        document.getElementById('cfgLongMA').value = p.long_ma;
-        document.getElementById('cfgInterval').value = p.trading_interval;
-        document.getElementById('cfgQty').value = p.order_quantity;
-        alert('프리셋이 설정창에 적용됐습니다. 저장 버튼을 눌러 config에 반영하세요.');
-    });
-}
-
-
-function startDaemon() {
-    if(!confirm('자동매매 데몬을 시작하시겠습니까?')) return;
-    fetch('/api/daemon/start', {method:'POST'}).then(function(r){return r.json();}).then(function(d){
-        if(d.ok) {
-            alert('데몬이 시작됐습니다. (PID: ' + d.pid + ')');
-            setTimeout(loadAutoConditions, 1000);
-        } else {
-            alert('시작 실패: ' + (d.error||''));
-        }
-    });
-}
-
-function stopDaemon() {
-    if(!confirm('자동매매 데몬을 중지하시겠습니까?')) return;
-    fetch('/api/daemon/stop', {method:'POST'}).then(function(r){return r.json();}).then(function(d){
-        if(d.ok) {
-            alert('데몬이 중지됐습니다.');
-            setTimeout(loadAutoConditions, 1000);
-        } else {
-            alert('중지 실패: ' + (d.error||''));
-        }
-    });
-}
-
-function applyPreset(id) {
-    fetch('/api/auto-presets').then(function(r){return r.json();}).then(function(d){
-        var p = (d.presets||[]).find(function(x){return x.id===id;});
-        if(!p) return;
-        document.getElementById('cfgPaper').value = p.is_paper ? 'true' : 'false';
-        if(p.risk_tolerance) document.getElementById('cfgRisk').value = (p.risk_tolerance*100).toFixed(1);
-        if(p.take_profit) document.getElementById('cfgProfit').value = (p.take_profit*100).toFixed(1);
-        if(p.short_ma) document.getElementById('cfgShortMA').value = p.short_ma;
-        if(p.long_ma) document.getElementById('cfgLongMA').value = p.long_ma;
-        if(p.trading_interval) document.getElementById('cfgInterval').value = p.trading_interval;
-        if(p.order_quantity) document.getElementById('cfgQty').value = p.order_quantity;
-
-        // config에 바로 저장
-        fetch('/api/auto-config', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                is_paper: p.is_paper,
-                risk_tolerance: p.risk_tolerance || 0.02,
-                take_profit: p.take_profit || 0.03,
-                short_ma: p.short_ma || 5,
-                long_ma: p.long_ma || 20,
-                trading_interval: p.trading_interval || 300,
-                order_quantity: p.order_quantity || 1
-            })
-        }).then(function(r){return r.json();}).then(function(d){
-            if(d.ok) alert('프리셋이 적용됐습니다. 데몬을 재시작하면 반영됩니다.');
-        });
-    });
-}
-
-
-var autoStockItems=[], autoStockSidx=-1;
-
-function autoStockSuggest(q) {
-    if(!q || q.length < 1) { document.getElementById('sgboxAutoStock').style.display='none'; return; }
-    fetch('/api/search/' + encodeURIComponent(q)).then(function(r){return r.json();}).then(function(d){
-        var arr = Array.isArray(d) ? d : (d.results||[]);
-        autoStockItems = arr;
-        autoStockSidx = -1;
-        var box = document.getElementById('sgboxAutoStock');
-        if(!arr.length) { box.style.display='none'; return; }
-        box.innerHTML = arr.slice(0,8).map(function(x,i){
-            return '<div data-code="'+(x.code||x.종목코드||'')+'" data-name="'+(x.name||x.종목명||'')+'" onmousedown="handleAutoStockSelect(this)" style="padding:9px 14px;cursor:pointer;font-size:.85em;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span>'+(x.name||x.종목명||'')+'</span><span style="color:var(--text3);font-size:.8em;">'+(x.code||x.종목코드||'')+'</span></div>';
-        }).join('');
-        box.style.display='block';
-    });
-}
-
-function handleAutoStockSelect(el) {
-    document.getElementById('autoStockInput').value = el.dataset.name + ' (' + el.dataset.code + ')';
-    document.getElementById('autoStockInput').dataset.code = el.dataset.code;
-    document.getElementById('autoStockInput').dataset.name = el.dataset.name;
-    document.getElementById('sgboxAutoStock').style.display='none';
-}
-
-function autoStockKeyDown(e) {
-    var box = document.getElementById('sgboxAutoStock');
-    var items = box.querySelectorAll('div');
-    if(e.key==='ArrowDown') { autoStockSidx=Math.min(autoStockSidx+1,items.length-1); items.forEach(function(el,i){el.style.background=i===autoStockSidx?'var(--surface2)':''}); e.preventDefault(); }
-    else if(e.key==='ArrowUp') { autoStockSidx=Math.max(autoStockSidx-1,0); items.forEach(function(el,i){el.style.background=i===autoStockSidx?'var(--surface2)':''}); e.preventDefault(); }
-    else if(e.key==='Enter') { if(autoStockSidx>=0 && items[autoStockSidx]) { handleAutoStockSelect(items[autoStockSidx]); } else { addMonitorStock(); } }
-    else if(e.key==='Escape') { box.style.display='none'; }
-}
-
-function addMonitorStock() {
-    var inp = document.getElementById('autoStockInput');
-    var code = inp.dataset.code;
-    var name = inp.dataset.name;
-    if(!code) { alert('종목을 검색해서 선택해주세요.'); return; }
-    fetch('/api/watchlist', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({code: code, name: name})
-    }).then(function(r){return r.json();}).then(function(d){
-        if(d.ok||d.success) {
-            inp.value=''; inp.dataset.code=''; inp.dataset.name='';
-            loadMonitorStocks();
-        } else {
-            alert(d.error||'추가 실패');
-        }
-    });
-}
-
-function loadMonitorStocks() {
-    fetch('/api/watchlist').then(function(r){return r.json();}).then(function(d){
-        var stocks = d.stocks || d || [];
-        var tbody = document.getElementById('autoBody');
-        if(!tbody) return;
-        if(!stocks.length) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:30px;color:var(--text3)">모니터링 종목이 없습니다</td></tr>';
-            return;
-        }
-        tbody.innerHTML = stocks.map(function(s){
-            var code = s.code || s;
-            var name = s.name || code;
-            return '<tr style="border-bottom:1px solid var(--border)">' +
-                '<td style="padding:8px;color:var(--text2)">' + code + '</td>' +
-                '<td style="padding:8px;font-weight:600">' + name + '</td>' +
-                '<td style="padding:8px;text-align:center"><span style="background:#10b98122;color:#10b981;border-radius:5px;padding:2px 8px;font-size:.78em;">모니터링</span></td>' +
-                '<td style="padding:8px;text-align:center"><button data-code="'+code+'" onmousedown="deleteMonitorStock(this)" style="background:none;border:1px solid var(--up);border-radius:5px;color:var(--up);padding:3px 10px;font-size:.78em;cursor:pointer;">삭제</button></td>' +
-                '</tr>';
-        }).join('');
-    });
-}
-
-function deleteMonitorStock(el) {
-    var code = el.dataset.code;
-    if(!confirm(code + ' 을 모니터링에서 제거할까요?')) return;
-    fetch('/api/watchlist/' + code, {method:'DELETE'}).then(function(r){return r.json();}).then(function(d){
-        if(d.ok||d.success) loadMonitorStocks();
-        else alert(d.error||'삭제 실패');
-    });
-}
-
-</script>
-<script>
-
-var watchSugItems=[], watchSugIdx=-1;
-
-function watchSuggest(q) {
-    if(!q || q.length < 1) { document.getElementById('sgboxWatch').style.display='none'; return; }
-    fetch('/api/search/' + encodeURIComponent(q)).then(function(r){return r.json();}).then(function(d){
-        var arr = Array.isArray(d) ? d : (d.results||[]);
-        watchSugItems = arr;
-        watchSugIdx = -1;
-        var box = document.getElementById('sgboxWatch');
-        if(!arr.length) { box.style.display='none'; return; }
-        box.innerHTML = arr.slice(0,8).map(function(x){
-            return '<div data-code="'+(x.code||x.종목코드||'')+'" data-name="'+(x.name||x.종목명||'')+'" onmousedown="handleWatchSelect(this)" style="padding:9px 14px;cursor:pointer;font-size:.85em;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;"><span>'+(x.name||x.종목명||'')+'</span><span style="color:var(--text3);font-size:.8em;">'+(x.code||x.종목코드||'')+'</span></div>';
-        }).join('');
-        box.style.display='block';
-    });
-}
-
-function handleWatchSelect(el) {
-    var inp = document.getElementById('watchInput');
-    inp.value = el.dataset.name + ' (' + el.dataset.code + ')';
-    inp.dataset.code = el.dataset.code;
-    inp.dataset.name = el.dataset.name;
-    document.getElementById('sgboxWatch').style.display='none';
-}
-
-function watchKeyDown(e) {
-    var box = document.getElementById('sgboxWatch');
-    var items = box.querySelectorAll('div');
-    if(e.key==='ArrowDown') { watchSugIdx=Math.min(watchSugIdx+1,items.length-1); items.forEach(function(el,i){el.style.background=i===watchSugIdx?'var(--surface2)':''}); e.preventDefault(); }
-    else if(e.key==='ArrowUp') { watchSugIdx=Math.max(watchSugIdx-1,0); items.forEach(function(el,i){el.style.background=i===watchSugIdx?'var(--surface2)':''}); e.preventDefault(); }
-    else if(e.key==='Enter') { if(watchSugIdx>=0 && items[watchSugIdx]) { handleWatchSelect(items[watchSugIdx]); } }
-    else if(e.key==='Escape') { box.style.display='none'; }
-}
-
-</script>
-</body>
-</html>

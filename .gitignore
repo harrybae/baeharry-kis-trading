@@ -8,3 +8,4 @@ trading_bot.log
 *.log
 .env
 .token_cache.json
+.aider*
