@@ -12,33 +12,6 @@ conversation_history = []
 
 # ── 날씨 조회 ─────────────────────────────────────────────────────
 
-def get_weather(city="Seoul"):
-    """wttr.in API로 날씨 조회 (API 키 불필요)"""
-    url = f"https://wttr.in/{city}?format=j1&lang=ko"
-    res = requests.get(url, timeout=10)
-    res.raise_for_status()
-    data = res.json()
-
-    current = data["current_condition"][0]
-    area = data["nearest_area"][0]
-    city_name = area["areaName"][0]["value"]
-    country = area["country"][0]["value"]
-
-    temp = current["temp_C"]
-    feels = current["FeelsLikeC"]
-    humidity = current["humidity"]
-    desc = current["lang_ko"][0]["value"] if current.get("lang_ko") else current["weatherDesc"][0]["value"]
-    wind = current["windspeedKmph"]
-
-    return (
-        f"🌤 {city_name}, {country} 날씨\n"
-        f"━━━━━━━━━━━━━━\n"
-        f"날씨: {desc}\n"
-        f"기온: {temp}°C (체감 {feels}°C)\n"
-        f"습도: {humidity}%\n"
-        f"풍속: {wind}km/h"
-    )
-
 # ── 뉴스 조회 ─────────────────────────────────────────────────────
 
 def translate_keyword(keyword):
@@ -146,7 +119,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/status [종목코드] - 현재가 및 보유 현황\n"
         "/buy - 수동 매수\n"
         "/sell - 수동 매도\n"
-        "/weather [도시명] - 날씨 조회\n"
         "/news - 최신 경제 뉴스\n"
         "/clear - 대화 초기화\n\n"
         "💬 일반 메시지를 입력하면 AI가 답변합니다!"
@@ -214,15 +186,6 @@ async def sell(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"❌ 오류: {e}")
 
-async def weather(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        city = context.args[0] if context.args else "Seoul"
-        await update.message.reply_text("⏳ 날씨 조회 중...")
-        result = get_weather(city)
-        await update.message.reply_text(result)
-    except Exception as e:
-        await update.message.reply_text(f"❌ 날씨 조회 실패: {e}")
-
 async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         keyword = context.args[0] if len(context.args) > 0 else "경제"
@@ -276,26 +239,6 @@ async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conversation_history = []
     await update.message.reply_text("🗑️ 대화 히스토리가 초기화되었습니다.")
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global conversation_history
-    user_message = update.message.text
-    await update.message.reply_text("⏳ 답변 생성 중...")
-    conversation_history.append({"role": "user", "content": user_message})
-    try:
-        response = ollama.chat(
-            model="deepseek-coder-v2:latest",
-            messages=[
-                {"role": "system", "content": "당신은 한국어로 대화하는 친절한 AI 어시스턴트입니다. 주식 자동매매 시스템과 연동되어 있으며 투자 관련 질문에도 답변할 수 있습니다."}
-            ] + conversation_history
-        )
-        ai_reply = response["message"]["content"]
-        conversation_history.append({"role": "assistant", "content": ai_reply})
-        if len(ai_reply) > 4000:
-            ai_reply = ai_reply[:4000] + "\n\n...(이하 생략)"
-        await update.message.reply_text(ai_reply)
-    except Exception as e:
-        await update.message.reply_text(f"❌ AI 응답 오류: {e}")
-
 # ── 메인 실행 ─────────────────────────────────────────────────────
 
 # ── 자동매매 신호 알림 ─────────────────────────────────────────────────────
@@ -326,10 +269,8 @@ def run_bot():
     app.add_handler(CommandHandler("status", status))
     app.add_handler(CommandHandler("buy", buy))
     app.add_handler(CommandHandler("sell", sell))
-    app.add_handler(CommandHandler("weather", weather))
     app.add_handler(CommandHandler("news", news))
     app.add_handler(CommandHandler("clear", clear))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     print("✅ 텔레그램 봇 시작됨")
     app.run_polling()
 
