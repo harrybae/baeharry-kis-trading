@@ -59,6 +59,20 @@ def stop_daemon():
         return jsonify({"error": str(e)}), 500
 
 
+@daemon_bp.route("/api/daemon/status", methods=["GET"])
+def daemon_status():
+    try:
+        import subprocess
+        result = subprocess.run(["pgrep", "-f", "auto_trading_with_risk_daemon.py"], capture_output=True, text=True)
+        pid = result.stdout.strip()
+        return jsonify({
+            "running": bool(pid),
+            "pid": pid or None,
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @daemon_bp.route("/api/auto-config", methods=["GET"])
 def get_auto_config():
     return jsonify({

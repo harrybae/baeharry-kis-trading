@@ -25,7 +25,22 @@ def validate_stock_code(code):
 
 
 @stock_bp.route("/api/search/<keyword>")
-def search_stock(keyword):
+def search_stock_by_keyword(keyword):
+    try:
+        results = stock_master.search_stocks(keyword, limit=8)
+        return jsonify(results)
+    except Exception as e:
+        import traceback
+        print(f"❌ API 에러: {str(e)}")
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
+
+
+@stock_bp.route("/api/search", methods=["GET"])
+def search_stock():
+    keyword = request.args.get("query", "").strip()
+    if not keyword:
+        return jsonify({"error": "query 파라미터가 필요합니다."}), 400
     try:
         results = stock_master.search_stocks(keyword, limit=8)
         return jsonify(results)

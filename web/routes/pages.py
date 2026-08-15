@@ -19,3 +19,8 @@ def index():
     resp.headers["Pragma"] = "no-cache"
     resp.headers["Expires"] = "0"
     return resp
+
+
+@pages_bp.route("/test")
+def test():
+    return render_template("test.html")
