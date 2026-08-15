@@ -15,6 +15,17 @@ import config
 import kis_api
 import stock_master
 
+
+def _format_kis_error(exc):
+    """KIS API HTTPError에서 상세 메시지를 추출합니다."""
+    try:
+        body = exc.response.json() if exc.response.text else {}
+    except Exception:
+        body = {}
+    msg = body.get("msg1") or body.get("message") or str(exc)
+    code = body.get("msg_cd") or body.get("code") or ""
+    return f"[{code}] {msg}" if code else msg
+
 stock_bp = Blueprint("stock", __name__)
 
 
@@ -67,7 +78,12 @@ def get_stock(stock_code):
         params = {"FID_COND_MRKT_DIV_CODE": "J", "FID_INPUT_ISCD": stock_code}
         res = req.get(f"{config.BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price",
                       headers=headers, params=params, timeout=10)
-        res.raise_for_status()
+        try:
+            res.raise_for_status()
+        except req.exceptions.HTTPError as exc:
+            detail = _format_kis_error(exc)
+            print(f"❌ KIS API 오류 ({stock_code}): {detail}")
+            return jsonify({"error": "KIS API 오류", "detail": detail}), 503
         out = res.json().get("output", {})
         price = int(out.get("stck_prpr", 0))
         prev = int(out.get("stck_sdpr", 0))
@@ -163,7 +179,12 @@ def get_chart(stock_code):
             f"{config.BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice",
             headers=headers, params=params, timeout=10
         )
-        res.raise_for_status()
+        try:
+            res.raise_for_status()
+        except req.exceptions.HTTPError as exc:
+            detail = _format_kis_error(exc)
+            print(f"❌ KIS API 오류 chart ({stock_code}): {detail}")
+            return jsonify({"error": "KIS API 오류", "detail": detail}), 503
         output = res.json().get("output2", [])
         chart = []
         for item in reversed(output):
