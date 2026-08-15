@@ -779,7 +779,13 @@ function doSearch(initCode){
         fetch('/api/chart/'+code+'?period=D&days=90').then(function(r){return r.json();})
     ]).then(function(res){
         var d=res[0],cd=res[1];
-        if(d.error){rc.innerHTML='<div class="sbox">❌ '+d.error+'</div>';}
+        if(d.error){
+            // 외부 API 장애 시 사용자 친화적 메시지
+            var friendly = (d.detail || d.error).toLowerCase().indexOf('kis') !== -1
+                ? '일시적으로 시세 데이터를 불러올 수 없습니다. 잠시 후 다시 시도해 주세요.'
+                : '조회 중 오류가 발생했습니다.';
+            rc.innerHTML='<div class="sbox">'+friendly+'</div>';
+        }
         else{
             renderResult(d);
             rebindSearch();
@@ -789,7 +795,7 @@ function doSearch(initCode){
         }
         if(sb){sb.disabled=false;sb.textContent='검색';}
     }).catch(function(e){
-        rc.innerHTML='<div class="sbox">❌ '+e.message+'</div>';
+        rc.innerHTML='<div class="sbox">일시적으로 데이터를 불러올 수 없습니다.</div>';
         if(sb){sb.disabled=false;sb.textContent='검색';}
     });
 }
@@ -2176,9 +2182,8 @@ function handleWelcomeKey(e) {
 }
 
 window.onload=function(){
-    setTimeout(function(){
-        doSearch('005930');
-    }, 100);
+    var rc=document.getElementById('rc');
+    if(rc) rc.innerHTML='<div class="sbox">📈 종목코드 또는 종목명을 입력하여 조회하세요</div>';
     startAlertTimer();
     loadMarket();
     startAutoTimer();
