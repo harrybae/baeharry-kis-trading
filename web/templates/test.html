@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body>
+<input type="text" id="inp" placeholder="여기에 '삼' 입력 후 방향키" style="width:300px;padding:10px;font-size:16px" autocomplete="off">
+<div id="dropdown" style="border:1px solid #ccc;display:none;width:300px;">
+  <div style="padding:10px">삼성전자 005930</div>
+  <div style="padding:10px">삼성SDI 006400</div>
+  <div style="padding:10px">삼성화재 000810</div>
+</div>
+<div id="log" style="margin-top:20px;font-size:18px;color:blue"></div>
+<script>
+var inp = document.getElementById('inp');
+var log = document.getElementById('log');
+var drop = document.getElementById('dropdown');
+
+inp.addEventListener('input', function() {
+    if (this.value.length > 0) drop.style.display = 'block';
+    else drop.style.display = 'none';
+});
+
+inp.addEventListener('keydown', function(e) {
+    log.innerHTML = 'keydown: ' + e.key + ' isOpen: ' + (drop.style.display === 'block');
+});
+</script>
+</body>
+</html>

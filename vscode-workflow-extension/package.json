@@ -1,0 +1,34 @@
+{
+  "name": "trading-workflow-runner",
+  "displayName": "Trading Workflow Runner",
+  "description": "Step-by-step trading project workflow with rule reminders",
+  "version": "0.1.0",
+  "publisher": "trading-local",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:tradingWorkflow.start"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "tradingWorkflow.start",
+        "title": "Trading Workflow: Start"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.80.0",
+    "typescript": "^5.0.0"
+  }
+}

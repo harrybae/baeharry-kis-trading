@@ -1,11 +1,27 @@
-config.py
+# 런타임 상태/데이터 파일 (소스는 추적 대상)
+data/*.json
+backup/*.prev
+backup/*.prev2
+.token_cache.json
+.env
+
+# 로그
+logs/
+*.log
+trading_bot.log
+
+# Python 캐시
 __pycache__/
 *.pyc
+*.pyo
 *.db
-.token_cache.json
+
+# OS/에디터
 .DS_Store
-trading_bot.log
-*.log
-.env
-.token_cache.json
 .aider*
+
+# VS Code 워크플로우 익스텐션 빌드 산출물
+vscode-workflow-extension/*.vsix
+vscode-workflow-extension/node_modules/
+vscode-workflow-extension/out/
+vscode-workflow-extension/dist/
