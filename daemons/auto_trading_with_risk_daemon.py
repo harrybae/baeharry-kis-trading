@@ -8,9 +8,7 @@ import sys
 import json
 from datetime import datetime, timedelta
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, ROOT_DIR)
-sys.path.insert(0, os.path.join(ROOT_DIR, 'src'))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config
 import kis_api
@@ -20,7 +18,7 @@ import telegram_bot
 from position_manager import PositionManager
 
 # 로그 파일에 동시에 출력
-log_file = open(os.path.join(ROOT_DIR, 'logs', 'auto_trading_risk_daemon.log'), 'a', encoding='utf-8')
+log_file = open('auto_trading_risk_daemon.log', 'a', encoding='utf-8')
 
 def print_log(msg):
     """stdout + 파일에 동시 출력"""
@@ -32,15 +30,13 @@ def print_log(msg):
 
 # 로깅 설정
 logging.basicConfig(
-    filename=os.path.join(ROOT_DIR, 'logs', 'auto_trading_risk_signal.log'),
+    filename='auto_trading_risk_signal.log',
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 class TradingDaemonWithRiskManagement:
-    def __init__(self, watchlist_file=None):
-        if watchlist_file is None:
-            watchlist_file = os.path.join(ROOT_DIR, 'data', 'watchlist.json')
+    def __init__(self, watchlist_file='watchlist.json'):
         self.check_interval = 300  # 5분마다 체크
         self.last_signals = {}  # 종목별 마지막 신호
         self.position_manager = PositionManager()
@@ -104,7 +100,7 @@ class TradingDaemonWithRiskManagement:
                 "FID_ORG_ADJ_PRC": "0",
             }
             
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            response = requests.get(url, headers=headers, params=params, verify=False, timeout=10)
             response.raise_for_status()
             data = response.json()
             
@@ -257,26 +253,14 @@ class TradingDaemonWithRiskManagement:
                         
                         if is_stop_loss:
                             print_log(f"🛑 {name}: 손절 조건 충족 ({loss_pct:.2f}%)")
-                            qty = position.get("quantity", config.ORDER_QUANTITY)
                             self.position_manager.close_position(code, current_price)
-                            ok, order_no = kis_api.place_order(code, "SELL", qty)
-                            if ok:
-                                print_log(f"   ✅ 손절 매도 주문 실행: {name} {qty}주 (주문번호: {order_no})")
-                            else:
-                                print_log(f"   ⚠️ 손절 매도 주문 실패: {name} {qty}주")
-                            self.send_alert(name, code, "STOP_LOSS", current_price,
-                                          f"손실률: {loss_pct:.2f}%, 수량: {qty}주")
+                            self.send_alert(name, code, "STOP_LOSS", current_price, 
+                                          f"손실률: {loss_pct:.2f}%")
                         elif is_take_profit:
                             print_log(f"🎯 {name}: 익절 조건 충족 ({profit_pct:.2f}%)")
-                            qty = position.get("quantity", config.ORDER_QUANTITY)
                             self.position_manager.close_position(code, current_price)
-                            ok, order_no = kis_api.place_order(code, "SELL", qty)
-                            if ok:
-                                print_log(f"   ✅ 익절 매도 주문 실행: {name} {qty}주 (주문번호: {order_no})")
-                            else:
-                                print_log(f"   ⚠️ 익절 매도 주문 실패: {name} {qty}주")
                             self.send_alert(name, code, "TAKE_PROFIT", current_price,
-                                          f"수익률: {profit_pct:.2f}%, 수량: {qty}주")
+                                          f"수익률: {profit_pct:.2f}%")
                         else:
                             current_pnl = (current_price - position["entry_price"]) * position["quantity"]
                             current_pnl_pct = ((current_price - position["entry_price"]) / position["entry_price"]) * 100
@@ -292,20 +276,10 @@ class TradingDaemonWithRiskManagement:
                                 print_log(f"   MA{config.LONG_MA}: {ma_long:,.0f}원")
                                 
                                 if signal == "BUY":
-                                    # 포지션 열기 + 실제 매수 주문
-                                    qty = config.ORDER_QUANTITY
-                                    self.position_manager.open_position(code, name, current_price, qty)
-                                    ok, order_no = kis_api.place_order(code, "BUY", qty)
-                                    if ok:
-                                        print_log(f"   ✅ 매수 주문 실행: {name} {qty}주 (주문번호: {order_no})")
-                                    else:
-                                        print_log(f"   ⚠️ 매수 주문 실패: {name} {qty}주")
-                                    self.send_alert(name, code, "BUY", current_price, f"수량: {qty}주")
-                                elif signal == "SELL":
-                                    # 공매도/숏 포지션은 지원하지 않으므로 알림만 전송
-                                    print_log(f"   ⚠️ SELL 신호 발생 but 공매도 미지원: {name}")
-                                    self.send_alert(name, code, "SELL", current_price, "공매도 미지원 - 알림만")
-
+                                    # 포지션 열기
+                                    self.position_manager.open_position(code, name, current_price, config.ORDER_QUANTITY)
+                                    self.send_alert(name, code, "BUY", current_price)
+                                
                                 self.last_signals[code] = signal
                         else:
                             print_log(f"⚪ {name}: 관망 ({current_price:,}원)")

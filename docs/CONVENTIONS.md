@@ -128,12 +128,12 @@ LLM이 가장 자주 건너뛰는 단계입니다. 절대 타협하지 않습니
 
 | 파일 | 설명 |
 |------|------|
-| data/positions.json | 현재 포지션 상태 |
-| data/trades.json | 거래 이력 |
-| data/alerts.json | 알림 설정/상태 |
-| data/watchlist.json | 관심 종목 목록 |
-| data/auto_presets.json | 자동 매매 프리셋 |
-> git으로 관리 중인 파일은 백업하지 않음: `src/*.py`, `web/*.py`, `web/templates/*.html`, `daemons/*.py`, `requirements.txt`, `docs/*.md` 등. `git status`로 확인 후 제외.
+| positions.json | 현재 포지션 상태 |
+| trades.json | 거래 이력 |
+| alerts.json | 알림 설정/상태 |
+| watchlist.json | 관심 종목 목록 |
+| auto_presets.json | 자동 매매 프리셋 |
+> git으로 관리 중인 파일은 백업하지 않음: `*.py`, `templates/index.html`, `templates/test.html`, `requirements.txt`, `stock_master_date.txt` 등. `git status`로 확인 후 제외.
 
 ## 2. 백업 수행 (Backup)
 
@@ -144,11 +144,10 @@ macOS zsh 기준:
 cd /Users/baeharry/trading
 mkdir -p backup
 
-for f in data/positions.json data/trades.json data/alerts.json data/watchlist.json data/auto_presets.json; do
+for f in positions.json trades.json alerts.json watchlist.json auto_presets.json; do
   if [[ -f "$f" ]]; then
-    local bname=$(basename "$f")
-    [[ -f "backup/$bname.prev" ]] && cp -f "backup/$bname.prev" "backup/$bname.prev2"
-    cp -f "$f" "backup/$bname.prev"
+    [[ -f "backup/$f.prev" ]] && cp -f "backup/$f.prev" "backup/$f.prev2"
+    cp -f "$f" "backup/$f.prev"
   fi
 done
 ```
@@ -185,8 +184,8 @@ backup/
 ### 4.2 검증 실행
 
 ```zsh
-python3 -m py_compile src/*.py web/app.py daemons/*.py
-python3 -c "import sys; sys.path[:0] = ['src']; import kis_api, strategy, position_manager, stock_master, telegram_bot"
+python -m py_compile app.py main.py kis_api.py strategy.py position_manager.py
+python -c "import app, strategy, kis_api, position_manager"
 ```
 
 - 결과를 보고합니다: "통과" / "X로 실패" / "Y 때문에 실행 안 함"

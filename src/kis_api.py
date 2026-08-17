@@ -6,10 +6,11 @@ import threading
 from datetime import datetime
 import config
 
-TOKEN_FILE = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    '.token_cache.json'
-)
+# Global KIS API request lock + retry to avoid transient 500s from mock/real server.
+_kis_request_lock = threading.Lock()
+
+
+TOKEN_FILE = os.path.expanduser("~/trading/.token_cache.json")
 
 _access_token = None
 _token_expires = 0
@@ -47,12 +48,13 @@ def _can_refresh_token():
     return True
 
 def _issue_new_token():
+    """Must be called with _token_lock held."""
     global _access_token, _token_expires, _token_refresh_count, _token_last_issued
-    
+
     if not _can_refresh_token():
         print(f"[{_now()}] 토큰 발급 횟수 초과 (1시간内有 {MAX_TOKEN_REFRESH_PER_HOUR}회 제한)")
         raise Exception("토큰 발급 횟수 초과")
-    
+
     url = f"{config.BASE_URL}/oauth2/tokenP"
     headers = {"Content-Type": "application/json"}
     body = {
@@ -60,7 +62,7 @@ def _issue_new_token():
         "appkey": config.APP_KEY,
         "appsecret": config.APP_SECRET,
     }
-    res = requests.post(url, headers=headers, json=body, timeout=10)
+    res = requests.post(url, headers=headers, json=body)
     res.raise_for_status()
     data = res.json()
 
@@ -78,26 +80,37 @@ def _issue_new_token():
     print(f"[{_now()}] 토큰 발급 완료 (발급횟수: {_token_refresh_count})")
     return _access_token
 
+def _load_cached_token():
+    """Load token from TOKEN_FILE into globals if still valid. Returns True on success."""
+    global _access_token, _token_expires
+    if not os.path.exists(TOKEN_FILE):
+        return False
+    try:
+        with open(TOKEN_FILE, 'r') as f:
+            cache = json.load(f)
+        if cache.get('expires') and time.time() < cache['expires'] and cache.get('token'):
+            _access_token = cache['token']
+            _token_expires = cache['expires']
+            print(f"[{_now()}] 토큰 캐시 사용")
+            return True
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"[{_now()}] 토큰 캐시 읽기 실패: {e}")
+    return False
+
 def get_access_token():
     global _access_token, _token_expires
 
     with _token_lock:
+        # 1) In-memory cache is valid
         if _access_token and time.time() < _token_expires:
             return _access_token
 
-    if os.path.exists(TOKEN_FILE):
-        try:
-            with open(TOKEN_FILE, 'r') as f:
-                cache = json.load(f)
-            if cache.get('expires') and time.time() < cache['expires']:
-                _access_token = cache['token']
-                _token_expires = cache['expires']
-                print(f"[{_now()}] 토큰 캐시 사용")
-                return _access_token
-        except (json.JSONDecodeError, IOError) as e:
-            print(f"[{_now()}] 토큰 캐시 읽기 실패: {e}")
+        # 2) Try loading a valid token from disk inside the same lock
+        if _load_cached_token():
+            return _access_token
 
-    return _issue_new_token()
+        # 3) Issue exactly one new token while holding the lock
+        return _issue_new_token()
 
 
 def _headers(tr_id):
@@ -110,6 +123,42 @@ def _headers(tr_id):
     }
 
 
+def _kis_request(method, url, retries=3, **kwargs):
+    """Serialize KIS API calls and retry on transient errors."""
+    method = method.lower()
+    last_err = None
+    with _kis_request_lock:
+        for attempt in range(retries):
+            try:
+                if method == "get":
+                    res = requests.get(url, timeout=15, **kwargs)
+                elif method == "post":
+                    res = requests.post(url, timeout=15, **kwargs)
+                else:
+                    raise ValueError(f"Unsupported method: {method}")
+                if res.status_code in (429, 500, 502, 503, 504) and attempt < retries - 1:
+                    print(f"[{_now()}] KIS {res.status_code} on {url}, retry {attempt + 1}/{retries}")
+                    time.sleep(0.3 * (2 ** attempt))
+                    continue
+                res.raise_for_status()
+                return res
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                last_err = e
+                if attempt < retries - 1:
+                    print(f"[{_now()}] KIS connection error on {url}, retry {attempt + 1}/{retries}: {e}")
+                    time.sleep(0.3 * (2 ** attempt))
+                    continue
+                raise
+            except requests.exceptions.HTTPError as e:
+                last_err = e
+                if attempt < retries - 1:
+                    print(f"[{_now()}] KIS HTTP error on {url}, retry {attempt + 1}/{retries}: {e}")
+                    time.sleep(0.3 * (2 ** attempt))
+                    continue
+                raise
+    raise last_err or Exception(f"KIS request failed: {url}")
+
+
 def get_current_price(stock_code):
     url = f"{config.BASE_URL}/uapi/domestic-stock/v1/quotations/inquire-price"
     headers = _headers("FHKST01010100")
@@ -117,8 +166,7 @@ def get_current_price(stock_code):
         "FID_COND_MRKT_DIV_CODE": "J",
         "FID_INPUT_ISCD": stock_code,
     }
-    res = requests.get(url, headers=headers, params=params, timeout=10)
-    res.raise_for_status()
+    res = _kis_request("get", url, headers=headers, params=params)
     return int(res.json().get("output", {}).get("stck_prpr", 0))
 
 
@@ -133,8 +181,7 @@ def get_minute_candles(stock_code, count=30):
         "FID_INPUT_HOUR_1": now,
         "FID_PW_DATA_INCU_YN": "Y",
     }
-    res = requests.get(url, headers=headers, params=params, timeout=10)
-    res.raise_for_status()
+    res = _kis_request("get", url, headers=headers, params=params)
     candles = res.json().get("output2", [])
     return [int(c["stck_prpr"]) for c in candles if "stck_prpr" in c][:count]
 
@@ -156,8 +203,7 @@ def get_balance():
         "CTX_AREA_FK100": "",
         "CTX_AREA_NK100": "",
     }
-    res = requests.get(url, headers=headers, params=params, timeout=10)
-    res.raise_for_status()
+    res = _kis_request("get", url, headers=headers, params=params)
     data = res.json()
     holdings = {}
     avg_costs = {}
@@ -186,8 +232,7 @@ def place_order(stock_code, order_type, quantity, price=0):
         "ORD_QTY": str(quantity),
         "ORD_UNPR": "0" if price == 0 else str(price),
     }
-    res = requests.post(url, headers=headers, json=body, timeout=10)
-    res.raise_for_status()
+    res = _kis_request("post", url, headers=headers, json=body)
     data = res.json()
     success = data.get("rt_cd") == "0"
     order_no = data.get("output", {}).get("ODNO", "")
@@ -200,8 +245,7 @@ def get_stock_name(stock_code):
     headers = _headers("CTPF1002R")
     params = {"PRDT_TYPE_CD": "300", "PDNO": stock_code}
     try:
-        res = requests.get(url, headers=headers, params=params, timeout=10)
-        res.raise_for_status()
+        res = _kis_request("get", url, headers=headers, params=params)
         output = res.json().get("output", {})
         return output.get("prdt_abrv_name") or output.get("prdt_name") or stock_code
     except requests.RequestException as e:
@@ -265,8 +309,7 @@ def get_account_balance():
         "CTX_AREA_FK100": "",
         "CTX_AREA_NK100": "",
     }
-    res = requests.get(url, headers=headers, params=params, timeout=10)
-    res.raise_for_status()
+    res = _kis_request("get", url, headers=headers, params=params)
     return res.json()
 
 def validate_stock_code(code):

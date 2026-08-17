@@ -11,9 +11,8 @@ import io
 from datetime import datetime, date
 import requests
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_PATH = os.path.join(ROOT_DIR, 'db', 'stock_master.db')
-LAST_UPDATE_PATH = os.path.join(ROOT_DIR, 'db', 'stock_master_date.txt')
+DB_PATH = os.path.expanduser("~/trading/stock_master.db")
+LAST_UPDATE_PATH = os.path.expanduser("~/trading/stock_master_date.txt")
 
 KOSPI_URL = "https://new.real.download.dws.co.kr/common/master/kospi_code.mst.zip"
 KOSDAQ_URL = "https://new.real.download.dws.co.kr/common/master/kosdaq_code.mst.zip"

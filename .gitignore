@@ -1,27 +1,31 @@
-# 런타임 상태/데이터 파일 (소스는 추적 대상)
-data/*.json
-backup/*.prev
-backup/*.prev2
-.token_cache.json
-.env
-
-# 로그
-logs/
-*.log
-trading_bot.log
-
-# Python 캐시
+config.py
 __pycache__/
 *.pyc
-*.pyo
 *.db
-
-# OS/에디터
+*.db-journal
+.token_cache.json
 .DS_Store
+trading_bot.log
+*.log
+.env
+.env.example
 .aider*
 
-# VS Code 워크플로우 익스텐션 빌드 산출물
-vscode-workflow-extension/*.vsix
+# Runtime / generated data
+.workflow/
+backup/
+data/
+logs/
+db/
+
+# Temp / test files
+tmp_*
+tmp_*.html
+tmp_*.png
+tmp_*.py
+test_*.py
+
+# VSCode extension build outputs
 vscode-workflow-extension/node_modules/
 vscode-workflow-extension/out/
-vscode-workflow-extension/dist/
+vscode-workflow-extension/*.vsix

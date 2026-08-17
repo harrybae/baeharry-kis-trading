@@ -5,7 +5,7 @@ import os
 from datetime import datetime
 import config
 
-POSITIONS_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'positions.json')
+POSITIONS_FILE = 'positions.json'
 
 class PositionManager:
     """포지션 관리 클래스"""
@@ -69,12 +69,10 @@ class PositionManager:
         """손절 조건 확인"""
         for pos in self.positions["positions"]:
             if pos["code"] == stock_code and pos["status"] == "open":
-                # strategy.py와 동일한 비율 단위(소수) 사용, 퍼센트 출력용 *100
-                loss_rate = (current_price - pos["entry_price"]) / pos["entry_price"]
-                loss_pct = loss_rate * 100
+                loss_pct = ((current_price - pos["entry_price"]) / pos["entry_price"]) * 100
                 
                 # 손절 기준: 손실률이 설정값 이상
-                if loss_rate <= -config.RISK_TOLERANCE:
+                if loss_pct <= -config.RISK_TOLERANCE * 100:
                     return True, loss_pct
         
         return False, 0
@@ -83,12 +81,10 @@ class PositionManager:
         """익절 조건 확인"""
         for pos in self.positions["positions"]:
             if pos["code"] == stock_code and pos["status"] == "open":
-                # strategy.py와 동일한 비율 단위(소수) 사용, 퍼센트 출력용 *100
-                profit_rate = (current_price - pos["entry_price"]) / pos["entry_price"]
-                profit_pct = profit_rate * 100
+                profit_pct = ((current_price - pos["entry_price"]) / pos["entry_price"]) * 100
                 
                 # 익절 기준: 수익률이 설정값 이상
-                if profit_rate >= config.TAKE_PROFIT:
+                if profit_pct >= config.TAKE_PROFIT * 100:
                     return True, profit_pct
         
         return False, 0
